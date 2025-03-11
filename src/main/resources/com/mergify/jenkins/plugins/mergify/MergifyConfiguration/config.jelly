@@ -1,0 +1,31 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:section title="Mergify CI">
+        <f:entry>
+            <div>
+                <p style="color: #666; font-style: italic;">
+                    You need to set one API Key per GitHub organization that Jenkins we connect to.
+                </p>
+            </div>
+        </f:entry>
+        <f:entry title="Mergify API Url" field="url">
+            <f:textbox/>
+        </f:entry>
+        <f:validateButton
+                title="${%Test Connection}" progress="${%Testing...}"
+                method="testConnection" with="url"/>
+        <f:repeatable field="orgApiKeys" add="Add a GitHub Organization">
+            <f:block>
+                <div align="right">
+                    <f:repeatableDeleteButton/>
+                </div>
+            </f:block>
+            <f:entry title="GitHub Organization Name" field="organizationName">
+                <f:textbox/>
+            </f:entry>
+            <f:entry title="Mergify CI API Key" field="apiKey">
+                <f:password/>
+            </f:entry>
+        </f:repeatable>
+    </f:section>
+</j:jelly>
