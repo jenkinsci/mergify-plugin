@@ -14,7 +14,6 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -50,7 +49,6 @@ public class TracerService {
         Resource resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), SERVICE_NAME)));
 
-
         switch (SPAN_EXPORTER_BACKEND) {
             case MEMORY:
                 spanExporter = InMemorySpanExporter.create();
@@ -63,9 +61,10 @@ public class TracerService {
                 break;
         }
 
-        sdkTracerProvider = SdkTracerProvider.builder().setResource(resource).addSpanProcessor(
-                SimpleSpanProcessor.builder(spanExporter).build()
-        ).build();
+        sdkTracerProvider = SdkTracerProvider.builder()
+                .setResource(resource)
+                .addSpanProcessor(SimpleSpanProcessor.builder(spanExporter).build())
+                .build();
 
         OpenTelemetrySdk sdk =
                 OpenTelemetrySdk.builder().setTracerProvider(sdkTracerProvider).build();

@@ -16,6 +16,11 @@ import hudson.tasks.Builder;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
@@ -30,12 +35,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -259,7 +258,6 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
     @Extension
     public static class BuildStepListener extends hudson.model.BuildStepListener {
 
-
         @Override
         public void started(AbstractBuild build, BuildStep step, BuildListener listener) {
             if (!isValidBuildStep(step)) {
@@ -332,7 +330,8 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 FilePath workspace,
                 TaskListener listener,
                 File changelogFile,
-                SCMRevisionState pollingBaseline) throws IOException, InterruptedException {
+                SCMRevisionState pollingBaseline)
+                throws IOException, InterruptedException {
 
             JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
             if (jobSpanMetadata == null) {
@@ -350,7 +349,6 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 GitClient client = gitSCM.createClient(listener, envVars, run, workspace);
                 jobSpanMetadata.setSCMCheckoutInfoFromGitSCM(gitSCM, client);
             }
-
         }
     }
 }

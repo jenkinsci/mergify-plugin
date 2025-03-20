@@ -1,5 +1,8 @@
 package io.jenkins.plugins.mergify;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
 import hudson.model.FreeStyleBuild;
@@ -14,6 +17,13 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -22,20 +32,10 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 public class IntegrationTest {
-    public final static AtomicInteger jobNameSuffix = new AtomicInteger();
+    public static final AtomicInteger jobNameSuffix = new AtomicInteger();
     private static final Logger LOGGER = Logger.getLogger(IntegrationTest.class.getName());
+
     @ClassRule
     @ConfiguredWithCode("test.yml")
     public static JenkinsConfiguredWithCodeRule jenkinsRule = new JenkinsConfiguredWithCodeRule();
@@ -53,7 +53,6 @@ public class IntegrationTest {
         ExtensionList<TracerService> tracerServiceExt =
                 jenkinsRule.getInstance().getExtensionList(TracerService.class);
         assert tracerServiceExt.size() == 1;
-
     }
 
     @Before
@@ -98,19 +97,16 @@ public class IntegrationTest {
         File repoDir = createGitRepository(jobName);
         String commit = runCommand(repoDir, "git rev-parse HEAD").trim();
 
-
         GitSCM gitSCM = new GitSCM(
                 Collections.singletonList(new UserRemoteConfig(repoDir.toURI().toString(), null, null, null)),
                 Collections.singletonList(new BranchSpec("*/main")),
                 null,
                 null,
-                Collections.emptyList()
-        );
+                Collections.emptyList());
         project.setScm(gitSCM);
         String githubProjectUrl = "https://github.com/mergifyio/plugin";
         project.addProperty(new GithubProjectProperty(githubProjectUrl));
         project.getBuildersList().add(new Shell("echo 'Hello World...'"));
-
 
         FreeStyleBuild build = jenkinsRule.buildAndAssertSuccess(project);
 
@@ -128,7 +124,8 @@ public class IntegrationTest {
             assertEquals("jenkins", attributes.get(TraceUtils.CICD_PROVIDER_NAME));
             assertEquals("test-freestyle #1", attributes.get(TraceUtils.CICD_PIPELINE_NAME));
             assertEquals("test-freestyle#1", attributes.get(TraceUtils.CICD_PIPELINE_ID));
-            assertTrue(((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-freestyle/1/"));
+            assertTrue(
+                    ((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-freestyle/1/"));
             assertEquals("main", attributes.get(TraceUtils.VCS_REF_BASE_NAME));
             assertEquals(commit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
             assertEquals("https://github.com/mergifyio/plugin/", attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
@@ -151,23 +148,21 @@ public class IntegrationTest {
 
         // Define the pipeline script
         String pipelineScript = String.format(
-                "pipeline {\n" +
-                        "    agent any\n" +
-                        "    stages {\n" +
-                        "        stage('Checkout') {\n" +
-                        "            steps {\n" +
-                        "                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "        stage('Build') {\n" +
-                        "            steps {\n" +
-                        "                sh 'echo Hello World...'\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "    }\n" +
-                        "}",
-                repoDir.toURI()
-        );
+                "pipeline {\n" + "    agent any\n"
+                        + "    stages {\n"
+                        + "        stage('Checkout') {\n"
+                        + "            steps {\n"
+                        + "                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])\n"
+                        + "            }\n"
+                        + "        }\n"
+                        + "        stage('Build') {\n"
+                        + "            steps {\n"
+                        + "                sh 'echo Hello World...'\n"
+                        + "            }\n"
+                        + "        }\n"
+                        + "    }\n"
+                        + "}",
+                repoDir.toURI());
 
         job.setDefinition(new CpsFlowDefinition(pipelineScript, true));
         job.addProperty(new GithubProjectProperty("https://github.com/mergifyio/plugin"));
@@ -188,7 +183,8 @@ public class IntegrationTest {
             assertEquals("jenkins", attributes.get(TraceUtils.CICD_PROVIDER_NAME));
             assertEquals("test-pipeline #1", attributes.get(TraceUtils.CICD_PIPELINE_NAME));
             assertEquals("test-pipeline#1", attributes.get(TraceUtils.CICD_PIPELINE_ID));
-            assertTrue(((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-pipeline/1/"));
+            assertTrue(
+                    ((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-pipeline/1/"));
             assertEquals("main", attributes.get(TraceUtils.VCS_REF_BASE_NAME));
             assertEquals(commit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
             assertEquals("https://github.com/mergifyio/plugin/", attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));

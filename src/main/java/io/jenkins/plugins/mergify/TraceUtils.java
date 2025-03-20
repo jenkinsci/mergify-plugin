@@ -5,7 +5,6 @@ import hudson.model.Run;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-
 import java.util.logging.Logger;
 
 public class TraceUtils {

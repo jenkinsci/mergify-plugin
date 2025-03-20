@@ -10,9 +10,6 @@ import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
 import io.opentelemetry.api.trace.Span;
-import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.gitclient.GitClient;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
 
 public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
@@ -123,7 +122,8 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         }
         // Retrieve repository URL
         List<UserRemoteConfig> remoteConfigs = gitSCM.getUserRemoteConfigs();
-        addRepositoryURL("GitSCM", remoteConfigs.isEmpty() ? null : remoteConfigs.get(0).getUrl());
+        addRepositoryURL(
+                "GitSCM", remoteConfigs.isEmpty() ? null : remoteConfigs.get(0).getUrl());
 
         // Retrieve branch
         List<BranchSpec> branches = gitSCM.getBranches();
