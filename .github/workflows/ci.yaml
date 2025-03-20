@@ -48,4 +48,4 @@ jobs:
 
       - name: Build 🔧 & Test 🔍
         run: |
-          mvn veritfy
+          mvn verify
