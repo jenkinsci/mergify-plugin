@@ -2,9 +2,10 @@
 # More Info: https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  #  push:
+  #    branches:
+  #      - main
 
 jobs:
   update_release_draft:
