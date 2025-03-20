@@ -19,6 +19,7 @@ import jakarta.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
+import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
@@ -212,10 +213,14 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         stageSpans.put(node, span);
 
         StepStartNode stepStartNode = (StepStartNode) node;
-        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, "Stage(" + stepStartNode.getDisplayName() + ")");
+
+        String taskName = "Stage(" + stepStartNode.getDisplayName() + ")";
+        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, taskName);
 
         SpanContext spanContext = span.getSpanContext();
         run.addOrReplaceAction(new ParentSpanAction(spanContext.getTraceId(), spanContext.getSpanId()));
+
+        LOGGER.info("Start stage: " + taskName);
     }
 
     private void endStageSpan(StepEndNode stepEndNode) {
@@ -245,6 +250,9 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         }
         span.setStatus(StatusCode.OK);
         span.end();
+
+        String taskName = "Stage(" + stepStartNode.getDisplayName() + ")";
+        LOGGER.info("Stop stage: " + taskName);
     }
 
     // Freestyle Job step Listener
@@ -324,7 +332,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 FilePath workspace,
                 TaskListener listener,
                 File changelogFile,
-                SCMRevisionState pollingBaseline) {
+                SCMRevisionState pollingBaseline) throws IOException, InterruptedException {
 
             JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
             if (jobSpanMetadata == null) {
@@ -337,6 +345,12 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 LOGGER.info("Got SCM checkout data: " + envVars);
                 jobSpanMetadata.setSCMCheckoutInfoFromEnvs(envVars);
             }
+            if (scm instanceof GitSCM) {
+                GitSCM gitSCM = (GitSCM) scm;
+                GitClient client = gitSCM.createClient(listener, envVars, run, workspace);
+                jobSpanMetadata.setSCMCheckoutInfoFromGitSCM(gitSCM, client);
+            }
+
         }
     }
 }

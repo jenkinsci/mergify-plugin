@@ -6,10 +6,15 @@ import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
 import hudson.model.Run;
+import hudson.plugins.git.BranchSpec;
+import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.UserRemoteConfig;
 import io.opentelemetry.api.trace.Span;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -59,16 +64,6 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         return this;
     }
 
-    public void setSCMCheckoutInfoFromEnvs(EnvVars envVars) {
-        this.addRepositoryURL("SCMCheckoutURL", envVars.get("GIT_URL"));
-        this.SCMCheckoutCommit = envVars.get("GIT_COMMIT");
-        this.SCMCheckoutBranch = envVars.get("GIT_BRANCH");
-        if (this.SCMCheckoutBranch != null) {
-            // Removes "origin/" or any "remote/"
-            this.SCMCheckoutBranch = this.SCMCheckoutBranch.replaceFirst("^[^/]+/", "");
-        }
-    }
-
     public void setCommonSpanAttributes(Span span) {
         if (repositoryURLs.isEmpty()) {
             LOGGER.warning("repositoryURLs is empty, skipping span");
@@ -110,6 +105,35 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
             return;
         }
         repositoryURLs.put(name, url);
+    }
+
+    public void setSCMCheckoutInfoFromEnvs(EnvVars envVars) {
+        addRepositoryURL("SCMCheckoutURL", envVars.get("GIT_URL"));
+        SCMCheckoutCommit = envVars.get("GIT_COMMIT");
+        SCMCheckoutBranch = envVars.get("GIT_BRANCH");
+        if (SCMCheckoutBranch != null) {
+            // Removes "origin/" or any "remote/"
+            SCMCheckoutBranch = SCMCheckoutBranch.replaceFirst("^[^/]+/", "");
+        }
+    }
+
+    public void setSCMCheckoutInfoFromGitSCM(GitSCM gitSCM, GitClient client) throws InterruptedException {
+        if (SCMCheckoutBranch != null && SCMCheckoutCommit != null) {
+            return;
+        }
+        // Retrieve repository URL
+        List<UserRemoteConfig> remoteConfigs = gitSCM.getUserRemoteConfigs();
+        addRepositoryURL("GitSCM", remoteConfigs.isEmpty() ? null : remoteConfigs.get(0).getUrl());
+
+        // Retrieve branch
+        List<BranchSpec> branches = gitSCM.getBranches();
+        SCMCheckoutBranch = branches.isEmpty() ? null : branches.get(0).getName();
+        if (SCMCheckoutBranch != null) {
+            // Removes "origin/" or any "remote/"
+            SCMCheckoutBranch = SCMCheckoutBranch.replaceFirst("^[^/]+/", "");
+        }
+
+        SCMCheckoutCommit = client.revParse("HEAD").name();
     }
 
     @Extension
