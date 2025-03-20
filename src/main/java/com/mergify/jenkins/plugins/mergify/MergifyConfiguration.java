@@ -66,23 +66,25 @@ public class MergifyConfiguration extends GlobalConfiguration {
     }
 
     public void setUrl(String url) {
-        this.url = url;
+        this.url = Util.fixEmptyAndTrim(url);
         save();
     }
 
     public FormValidation doCheckUrl(@QueryParameter String value) throws IOException, ServletException {
-        if (Util.fixEmptyAndTrim(value) == null) {
+        String valueTrim = Util.fixEmptyAndTrim(value);
+        if (valueTrim == null) {
             return FormValidation.error("Mergify API URL cannot be empty.");
         }
-        if (!value.startsWith("https://")) {
+        if (!valueTrim.startsWith("https://")) {
             return FormValidation.error("URL must start with 'https://'.");
         }
 
+        if (!Pattern.matches("^https://[^/]+$", valueTrim)) {
+            return FormValidation.error("URL must not contain a path. Only domain is allowed.");
+        }
+
         try {
-            URL url = new URL(value);
-            if (!Pattern.matches("^https://[^/]+$", value)) {
-                return FormValidation.error("URL must not contain a path. Only domain is allowed.");
-            }
+            new URL(valueTrim);
         } catch (MalformedURLException e) {
             return FormValidation.error("Invalid URL format.");
         }

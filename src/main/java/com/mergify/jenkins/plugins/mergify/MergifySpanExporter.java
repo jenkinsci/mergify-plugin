@@ -69,7 +69,7 @@ final class MergifySpanExporter implements SpanExporter {
             LOGGER.info("Exporting " + spans.size() + " spans to repository `" + repositoryName + "`");
 
             CompletableResultCode exportResult;
-            OtlpHttpSpanExporter exporter = getSpanExporter(repositoryName);
+            SpanExporter exporter = getSpanExporter(repositoryName);
             try {
                 exportResult = exporter.export(spans);
                 exporter.flush();
