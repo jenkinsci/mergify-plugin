@@ -15,6 +15,11 @@ import hudson.tasks.BuildStep;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
@@ -27,12 +32,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -132,7 +131,6 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         return null; // No GitHub source found
     }
 
-
     // Pipeline stage Listener
     @Override
     public void onNewHead(FlowNode node) {
@@ -160,7 +158,9 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             return;
         }
         Tracer tracer = TracerService.getTracer();
-        Span span = tracer.spanBuilder(run.getDisplayName()).setSpanKind(SpanKind.SERVER).startSpan();
+        Span span = tracer.spanBuilder(run.getDisplayName())
+                .setSpanKind(SpanKind.SERVER)
+                .startSpan();
         buildSpans.put(run, span);
 
         JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
@@ -197,7 +197,9 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         }
         Context parentContext = Context.current().with(parentSpan);
         Tracer tracer = TracerService.getTracer();
-        SpanBuilder builder = tracer.spanBuilder(node.getDisplayName()).setSpanKind(SpanKind.INTERNAL).setParent(parentContext);
+        SpanBuilder builder = tracer.spanBuilder(node.getDisplayName())
+                .setSpanKind(SpanKind.INTERNAL)
+                .setParent(parentContext);
         Span span = builder.startSpan();
         stageSpans.put(node, span);
 
@@ -248,8 +250,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 return;
             }
             Tracer tracer = TracerService.getTracer();
-            Span stepSpan = tracer.spanBuilder(
-                            "Jenkins Step: " + step)
+            Span stepSpan = tracer.spanBuilder("Jenkins Step: " + step)
                     .setParent(io.opentelemetry.context.Context.current().with(parentSpan))
                     .setSpanKind(SpanKind.INTERNAL)
                     .startSpan();
@@ -275,7 +276,8 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             }
             jobSpanMetadata.setCommonSpanAttributes(span);
 
-            span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, step.getClass().getSimpleName());
+            span.setAttribute(
+                    TraceUtils.CICD_PIPELINE_TASK_NAME, step.getClass().getSimpleName());
 
             if (canContinue) {
                 span.setStatus(StatusCode.OK);
@@ -298,8 +300,13 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
         // Not called if a checkout fails.
         @Override
-        public void onCheckout(Run<?, ?> run, SCM scm, FilePath workspace, TaskListener listener,
-                               File changelogFile, SCMRevisionState pollingBaseline) {
+        public void onCheckout(
+                Run<?, ?> run,
+                SCM scm,
+                FilePath workspace,
+                TaskListener listener,
+                File changelogFile,
+                SCMRevisionState pollingBaseline) {
 
             JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
             if (jobSpanMetadata == null) {
@@ -314,5 +321,4 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             }
         }
     }
-
 }

@@ -9,6 +9,7 @@ import hudson.model.Run;
 import io.opentelemetry.api.trace.Span;
 import jenkins.model.Jenkins;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -28,7 +29,7 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         this.pipelineName = run.getFullDisplayName();
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = Jenkins.get().getRootUrl() + run.getUrl();
-        this.repositoryURLs = new ConcurrentHashMap<>();
+        this.repositoryURLs = new LinkedHashMap<>();
     }
 
     static String getRepositoryName(String url) {
@@ -106,7 +107,6 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         }
         repositoryURLs.put(name, url);
     }
-
 
     @Extension
     public static final class RunSpanPropertyDescriptor extends JobPropertyDescriptor {

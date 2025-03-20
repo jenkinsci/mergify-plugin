@@ -27,6 +27,7 @@ public class JobMetadataTest {
 
     @Mock
     private Span span;
+
     private JobMetadata jobMetadata;
 
     @Before
@@ -78,9 +79,9 @@ public class JobMetadataTest {
         verify(span).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), contains("/jenkins/job/test-job/1/"));
         verify(span).setAttribute(TraceUtils.VCS_REF_BASE_NAME, "main");
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, "abcdef123456");
-        //verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo-project.git");
-        //verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "SOURCE");
-        //verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_NAME, "owner/repo-project");
+        verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo-project.git");
+        verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "PROJECT");
+        verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_NAME, "owner/repo-project");
     }
 
     @Test

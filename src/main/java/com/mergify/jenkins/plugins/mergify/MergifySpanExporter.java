@@ -1,11 +1,9 @@
 package com.mergify.jenkins.plugins.mergify;
 
-
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,16 +17,13 @@ final class MergifySpanExporter implements SpanExporter {
     private static final Logger LOGGER = Logger.getLogger(MergifySpanExporter.class.getName());
     private final Map<String, OtlpHttpSpanExporter> spanExporters = new ConcurrentHashMap<>();
 
-    public MergifySpanExporter() {
-    }
+    public MergifySpanExporter() {}
 
     private static Map<String, List<SpanData>> groupByRepositoryName(Collection<SpanData> collection) {
         return collection.stream()
                 .filter(span -> span.getAttributes().get(TraceUtils.VCS_REPOSITORY_NAME) != null)
                 .collect(Collectors.groupingBy(
-                        span -> span.getAttributes().get(TraceUtils.VCS_REPOSITORY_NAME),
-                        Collectors.toList()
-                ));
+                        span -> span.getAttributes().get(TraceUtils.VCS_REPOSITORY_NAME), Collectors.toList()));
     }
 
     private OtlpHttpSpanExporter getSpanExporter(String repositoryName) {
@@ -61,7 +56,8 @@ final class MergifySpanExporter implements SpanExporter {
     public CompletableResultCode export(Collection<SpanData> collection) {
 
         Map<String, List<SpanData>> groupedByRepositoryName = groupByRepositoryName(collection);
-        LOGGER.info("Exporting " + collection.size() + " spans across " + groupedByRepositoryName.size() + " repositories");
+        LOGGER.info(
+                "Exporting " + collection.size() + " spans across " + groupedByRepositoryName.size() + " repositories");
 
         List<CompletableResultCode> results = new ArrayList<>(groupedByRepositoryName.size());
 
@@ -132,6 +128,4 @@ final class MergifySpanExporter implements SpanExporter {
     public String toString() {
         return "MergifySpanExporter{spanExporters=" + this.spanExporters + '}';
     }
-
 }
-

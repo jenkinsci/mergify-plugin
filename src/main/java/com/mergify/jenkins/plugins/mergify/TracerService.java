@@ -12,7 +12,6 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-
 import java.util.logging.Logger;
 
 @Extension
@@ -24,22 +23,21 @@ public class TracerService {
     @Initializer(after = InitMilestone.SYSTEM_CONFIG_LOADED)
     public static void init() {
         LOGGER.info("Initializing Mergify Tracer");
-        Resource resource = Resource.getDefault().merge(
-                Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), SERVICE_NAME))
-        );
+        Resource resource = Resource.getDefault()
+                .merge(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), SERVICE_NAME)));
 
         SpanExporter spanExporterMergify = new MergifySpanExporter();
         SpanExporter spanExporterLog = OtlpJsonLoggingSpanExporter.create();
 
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .addSpanProcessor(SimpleSpanProcessor.builder(spanExporterLog).build())
-                .addSpanProcessor(SimpleSpanProcessor.builder(spanExporterMergify).build())
+                .addSpanProcessor(
+                        SimpleSpanProcessor.builder(spanExporterMergify).build())
                 .setResource(resource)
                 .build();
 
-        OpenTelemetrySdk sdk = OpenTelemetrySdk.builder()
-                .setTracerProvider(sdkTracerProvider)
-                .build();
+        OpenTelemetrySdk sdk =
+                OpenTelemetrySdk.builder().setTracerProvider(sdkTracerProvider).build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(sdkTracerProvider::close));
         tracer = sdk.getTracer(SERVICE_NAME);
@@ -49,6 +47,4 @@ public class TracerService {
     public static Tracer getTracer() {
         return tracer;
     }
-
-
 }

@@ -5,22 +5,23 @@ import hudson.model.Run;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-
 import java.util.logging.Logger;
 
-
 public class TraceUtils {
-    final public static AttributeKey<String> CICD_PIPELINE_NAME = AttributeKey.stringKey("cicd.pipeline.name");
-    final public static AttributeKey<String> CICD_PIPELINE_URL = AttributeKey.stringKey("cicd.pipeline.url");
-    final public static AttributeKey<String> CICD_PIPELINE_TASK_ID = AttributeKey.stringKey("cicd.pipeline.task.id");
-    final public static AttributeKey<String> CICD_PIPELINE_TASK_NAME = AttributeKey.stringKey("cicd.pipeline.task.name");
-    final public static AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
-    final public static AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
-    final public static AttributeKey<String> VCS_REF_BASE_NAME = AttributeKey.stringKey("vcs.ref.base.name");
-    final public static AttributeKey<String> VCS_REF_HEAD_REVISION = AttributeKey.stringKey("vcs.ref.head.revision");
-    final public static AttributeKey<String> VCS_REPOSITORY_NAME = AttributeKey.stringKey("vcs.repository.name");
-    final public static AttributeKey<String> VCS_REPOSITORY_URL_FULL = AttributeKey.stringKey("vcs.repository.url.full");
-    final public static AttributeKey<String> VCS_REPOSITORY_URL_SOURCE = AttributeKey.stringKey("vcs.repository.url.source");
+    public static final AttributeKey<String> CICD_PIPELINE_NAME = AttributeKey.stringKey("cicd.pipeline.name");
+    public static final AttributeKey<String> CICD_PIPELINE_URL = AttributeKey.stringKey("cicd.pipeline.url");
+    public static final AttributeKey<String> CICD_PIPELINE_TASK_ID = AttributeKey.stringKey("cicd.pipeline.task.id");
+    public static final AttributeKey<String> CICD_PIPELINE_TASK_NAME =
+            AttributeKey.stringKey("cicd.pipeline.task.name");
+    public static final AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
+    public static final AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
+    public static final AttributeKey<String> VCS_REF_BASE_NAME = AttributeKey.stringKey("vcs.ref.base.name");
+    public static final AttributeKey<String> VCS_REF_HEAD_REVISION = AttributeKey.stringKey("vcs.ref.head.revision");
+    public static final AttributeKey<String> VCS_REPOSITORY_NAME = AttributeKey.stringKey("vcs.repository.name");
+    public static final AttributeKey<String> VCS_REPOSITORY_URL_FULL =
+            AttributeKey.stringKey("vcs.repository.url.full");
+    public static final AttributeKey<String> VCS_REPOSITORY_URL_SOURCE =
+            AttributeKey.stringKey("vcs.repository.url.source");
     private static final Logger LOGGER = Logger.getLogger(TraceUtils.class.getName());
 
     public static void setSpanStatusFromResult(Span span, Run<?, ?> run) {
