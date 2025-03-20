@@ -10,11 +10,10 @@ import hudson.model.TaskListener;
 public class MergifySpanIdEnvsContributor extends EnvironmentContributor {
 
     public void buildEnvironmentFor(Run run, EnvVars envs, TaskListener listener) {
-        SpanIdAction action = run.getAction(SpanIdAction.class);
+        ParentSpanAction action = run.getAction(ParentSpanAction.class);
         if (action != null) {
-            String spanId = action.getSpanId();
-            envs.put("MERGIFY_SPAN_ID", spanId);
-            //listener.getLogger().println("Injected MERGIFY_SPAN_ID into environment: " + spanId);
+            envs.put("MERGIFY_SPAN_ID", action.getSpanId());
+            envs.put("MERGIFY_TRACE_ID", action.getTraceId());
         }
     }
 }

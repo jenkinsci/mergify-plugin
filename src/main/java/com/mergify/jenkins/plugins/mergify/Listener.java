@@ -205,7 +205,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, "Stage(" + stepStartNode.getDisplayName() + ")");
 
         SpanContext spanContext = span.getSpanContext();
-        run.addOrReplaceAction(new SpanIdAction(spanContext.getSpanId()));
+        run.addOrReplaceAction(new ParentSpanAction(spanContext.getTraceId(), spanContext.getSpanId()));
     }
 
     private void endStageSpan(StepEndNode stepEndNode) {
@@ -257,7 +257,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             stepSpans.put(step, stepSpan);
 
             SpanContext spanContext = stepSpan.getSpanContext();
-            build.addOrReplaceAction(new SpanIdAction(spanContext.getSpanId()));
+            build.addOrReplaceAction(new ParentSpanAction(spanContext.getTraceId(), spanContext.getSpanId()));
         }
 
         @Override
