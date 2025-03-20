@@ -1,4 +1,4 @@
-package com.mergify.jenkins.plugins.mergify;
+package io.jenkins.plugins.mergify;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -12,14 +12,11 @@ import hudson.plugins.git.GitSCM;
 import hudson.scm.SCM;
 import hudson.scm.SCMRevisionState;
 import hudson.tasks.BuildStep;
+import hudson.tasks.Builder;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
@@ -32,6 +29,12 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -129,6 +132,11 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         }
 
         return null; // No GitHub source found
+    }
+
+    static boolean isValidBuildStep(BuildStep step) {
+        return step instanceof Builder // Normal build steps
+                || Jenkins.get().getExtensionList(BuildStep.class).contains(step);
     }
 
     // Pipeline stage Listener
@@ -242,8 +250,14 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
     // Freestyle Job step Listener
     @Extension
     public static class BuildStepListener extends hudson.model.BuildStepListener {
+
+
         @Override
         public void started(AbstractBuild build, BuildStep step, BuildListener listener) {
+            if (!isValidBuildStep(step)) {
+                LOGGER.info("Step ignored " + step);
+                return;
+            }
             Span parentSpan = buildSpans.get(build);
             if (parentSpan == null) {
                 LOGGER.warning("Got started step without parent span");
@@ -263,6 +277,10 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
         @Override
         public void finished(AbstractBuild build, BuildStep step, BuildListener listener, boolean canContinue) {
+            if (!isValidBuildStep(step)) {
+                LOGGER.info("Step ignored " + step);
+                return;
+            }
             Span span = stepSpans.get(step);
             if (span == null) {
                 LOGGER.warning("Got completed step without span");

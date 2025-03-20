@@ -1,9 +1,10 @@
-package com.mergify.jenkins.plugins.mergify;
+package io.jenkins.plugins.mergify;
 
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -17,7 +18,8 @@ final class MergifySpanExporter implements SpanExporter {
     private static final Logger LOGGER = Logger.getLogger(MergifySpanExporter.class.getName());
     private final Map<String, OtlpHttpSpanExporter> spanExporters = new ConcurrentHashMap<>();
 
-    public MergifySpanExporter() {}
+    public MergifySpanExporter() {
+    }
 
     private static Map<String, List<SpanData>> groupByRepositoryName(Collection<SpanData> collection) {
         return collection.stream()

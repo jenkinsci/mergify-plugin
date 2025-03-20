@@ -1,10 +1,11 @@
-package com.mergify.jenkins.plugins.mergify;
+package io.jenkins.plugins.mergify;
 
 import hudson.model.Result;
 import hudson.model.Run;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
+
 import java.util.logging.Logger;
 
 public class TraceUtils {

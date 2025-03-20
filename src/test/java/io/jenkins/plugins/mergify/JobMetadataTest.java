@@ -1,4 +1,4 @@
-package com.mergify.jenkins.plugins.mergify;
+package io.jenkins.plugins.mergify;
 
 import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
@@ -67,7 +67,7 @@ public class JobMetadataTest {
         EnvVars envVars = new EnvVars();
         envVars.put("GIT_URL", "https://github.com/owner/repo.git");
         envVars.put("GIT_COMMIT", "abcdef123456");
-        envVars.put("GIT_BRANCH", "main");
+        envVars.put("GIT_BRANCH", "origin/main");
 
         jobMetadata.setSCMCheckoutInfoFromEnvs(envVars);
 
@@ -89,7 +89,7 @@ public class JobMetadataTest {
         EnvVars envVars = new EnvVars();
         envVars.put("GIT_URL", "https://github.com/owner/repo.git");
         envVars.put("GIT_COMMIT", "abcdef123456");
-        envVars.put("GIT_BRANCH", "main");
+        envVars.put("GIT_BRANCH", "origin/main");
 
         jobMetadata.setSCMCheckoutInfoFromEnvs(envVars);
 
@@ -111,6 +111,7 @@ public class JobMetadataTest {
         assertEquals("owner/repo", JobMetadata.getRepositoryName("https://github.com/owner/repo.git"));
         assertEquals("owner/repo", JobMetadata.getRepositoryName("git@github.com:owner/repo.git"));
         assertEquals("owner/repo", JobMetadata.getRepositoryName("https://github.com/owner/repo"));
+        assertEquals("owner/repo", JobMetadata.getRepositoryName("https://github.com/owner/repo/"));
         assertNull(JobMetadata.getRepositoryName("invalid-url"));
     }
 }

@@ -1,4 +1,4 @@
-package com.mergify.jenkins.plugins.mergify;
+package io.jenkins.plugins.mergify;
 
 import hudson.EnvVars;
 import hudson.Extension;
@@ -38,7 +38,7 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         }
 
         // Remove .git suffix if present
-        url = url.replaceAll("\\.git$", "");
+        url = url.replaceAll("/$", "").replaceAll("\\.git$", "");
 
         // Match GitHub organization and repository name
         Pattern pattern = Pattern.compile("[:/]([^:/]+)/([^:/]+?)(?:\\.git)?$");
@@ -63,6 +63,10 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         this.addRepositoryURL("SCMCheckoutURL", envVars.get("GIT_URL"));
         this.SCMCheckoutCommit = envVars.get("GIT_COMMIT");
         this.SCMCheckoutBranch = envVars.get("GIT_BRANCH");
+        if (this.SCMCheckoutBranch != null) {
+            // Removes "origin/" or any "remote/"
+            this.SCMCheckoutBranch = this.SCMCheckoutBranch.replaceFirst("^[^/]+/", "");
+        }
     }
 
     public void setCommonSpanAttributes(Span span) {

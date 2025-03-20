@@ -1,4 +1,4 @@
-package com.mergify.jenkins.plugins.mergify;
+package io.jenkins.plugins.mergify;
 
 import hudson.EnvVars;
 import hudson.Extension;
