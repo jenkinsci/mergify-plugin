@@ -1,22 +1,19 @@
 package io.jenkins.plugins.mergify;
 
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.util.Collection;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.logging.Logger;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
 public class MergifySpanExporterTest {
-    private static final Logger LOGGER = Logger.getLogger(MergifySpanExporterTest.class.getName());
     MergifyConfigurationProvider mockConfig;
     OtlpHttpSpanExporter mockOtlpExporter;
     private MergifySpanExporter exporter;
@@ -34,12 +31,13 @@ public class MergifySpanExporterTest {
         exporter = spy(new MergifySpanExporter(mockConfig));
         exporterCaptor = ArgumentCaptor.forClass(Collection.class);
 
-
         mockOtlpExporter = mock(OtlpHttpSpanExporter.class);
         when(mockOtlpExporter.flush()).thenReturn(CompletableResultCode.ofSuccess());
         when(mockOtlpExporter.shutdown()).thenReturn(CompletableResultCode.ofSuccess());
 
-        doReturn(mockOtlpExporter).when(exporter).createExporter("https://api.mergify.com/v1/repos/org/repo/ci/traces", "secret");
+        doReturn(mockOtlpExporter)
+                .when(exporter)
+                .createExporter("https://api.mergify.com/v1/repos/org/repo/ci/traces", "secret");
     }
 
     @Test

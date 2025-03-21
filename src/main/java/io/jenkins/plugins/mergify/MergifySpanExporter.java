@@ -4,7 +4,6 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -55,10 +54,7 @@ final class MergifySpanExporter implements SpanExporter {
             return null;
         }
 
-        OtlpHttpSpanExporter newExporter = createExporter(
-                url + "/v1/repos/" + repositoryName + "/ci/traces",
-                token
-        );
+        OtlpHttpSpanExporter newExporter = createExporter(url + "/v1/repos/" + repositoryName + "/ci/traces", token);
         spanExporters.put(repositoryName, newExporter);
         return newExporter;
     }

@@ -1,5 +1,6 @@
 package io.jenkins.plugins.mergify;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
@@ -14,7 +15,6 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -23,7 +23,12 @@ public class TracerService {
 
     private static final Logger LOGGER = Logger.getLogger(TracerService.class.getName());
     private static final String SERVICE_NAME = "MergifyJenkinsPlugin";
+
+    @SuppressFBWarnings(
+            value = "MS_SHOULD_BE_FINAL",
+            justification = "Intentional non-final static for runtime override/testing")
     public static SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
+
     private static Tracer tracer;
     private static SpanExporter spanExporter;
     private static SdkTracerProvider sdkTracerProvider;
@@ -45,7 +50,7 @@ public class TracerService {
     }
 
     @Initializer(after = InitMilestone.SYSTEM_CONFIG_ADAPTED, before = InitMilestone.JOB_LOADED)
-    public void init() {
+    public static void init() {
         LOGGER.info("Initializing Mergify Tracer");
         Resource resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), SERVICE_NAME)));

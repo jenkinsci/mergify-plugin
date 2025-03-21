@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
-import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
@@ -22,18 +21,15 @@ import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 public class IntegrationTest {
-    public static final AtomicInteger jobNameSuffix = new AtomicInteger();
     private static final Logger LOGGER = Logger.getLogger(IntegrationTest.class.getName());
 
     @ClassRule
@@ -108,7 +104,7 @@ public class IntegrationTest {
         project.addProperty(new GithubProjectProperty(githubProjectUrl));
         project.getBuildersList().add(new Shell("echo 'Hello World...'"));
 
-        FreeStyleBuild build = jenkinsRule.buildAndAssertSuccess(project);
+        jenkinsRule.buildAndAssertSuccess(project);
 
         List<SpanData> spans = getSpans();
         assertEquals(2, spans.size());
@@ -167,7 +163,7 @@ public class IntegrationTest {
         job.setDefinition(new CpsFlowDefinition(pipelineScript, true));
         job.addProperty(new GithubProjectProperty("https://github.com/mergifyio/plugin"));
 
-        WorkflowRun build = jenkinsRule.buildAndAssertSuccess(job);
+        jenkinsRule.buildAndAssertSuccess(job);
 
         List<SpanData> spans = getSpans();
         assertEquals(3, spans.size());
