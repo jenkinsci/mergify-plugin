@@ -4,6 +4,7 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -17,7 +18,11 @@ final class MergifySpanExporter implements SpanExporter {
     private static final Logger LOGGER = Logger.getLogger(MergifySpanExporter.class.getName());
     private final Map<String, OtlpHttpSpanExporter> spanExporters = new ConcurrentHashMap<>();
 
-    public MergifySpanExporter() {}
+    private final MergifyConfigurationProvider config;
+
+    public MergifySpanExporter(MergifyConfigurationProvider config) {
+        this.config = config;
+    }
 
     private static Map<String, List<SpanData>> groupByRepositoryName(Collection<SpanData> collection) {
         return collection.stream()
@@ -26,28 +31,34 @@ final class MergifySpanExporter implements SpanExporter {
                         span -> span.getAttributes().get(TraceUtils.VCS_REPOSITORY_NAME), Collectors.toList()));
     }
 
+    OtlpHttpSpanExporter createExporter(String endpoint, String token) {
+        return OtlpHttpSpanExporter.builder()
+                .addHeader("Authorization", "Bearer " + token)
+                .setEndpoint(endpoint)
+                .build();
+    }
+
     private OtlpHttpSpanExporter getSpanExporter(String repositoryName) {
         OtlpHttpSpanExporter exporter = spanExporters.get(repositoryName);
         if (exporter != null) {
             return exporter;
         }
-        MergifyConfiguration config = MergifyConfiguration.get();
-
         if (config == null) {
             return null;
         }
 
         String url = config.getUrl();
         String token = config.getApiKeyForOrg(repositoryName.split("/")[0]);
+        LOGGER.log(Level.FINE, "Getting token {0}", token);
         if (token == null) {
             LOGGER.warning("No token found for repository: " + repositoryName);
             return null;
         }
 
-        OtlpHttpSpanExporter newExporter = OtlpHttpSpanExporter.builder()
-                .addHeader("Authorization", "Bearer " + token)
-                .setEndpoint(url + "/v1/repos/" + repositoryName + "/ci/traces")
-                .build();
+        OtlpHttpSpanExporter newExporter = createExporter(
+                url + "/v1/repos/" + repositoryName + "/ci/traces",
+                token
+        );
         spanExporters.put(repositoryName, newExporter);
         return newExporter;
     }
@@ -66,6 +77,12 @@ final class MergifySpanExporter implements SpanExporter {
 
             CompletableResultCode exportResult;
             SpanExporter exporter = getSpanExporter(repositoryName);
+
+            if (exporter == null) {
+                results.add(CompletableResultCode.ofSuccess());
+                return;
+            }
+
             try {
                 exportResult = exporter.export(spans);
                 exporter.flush();

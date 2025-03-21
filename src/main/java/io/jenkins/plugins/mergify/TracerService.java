@@ -14,6 +14,7 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -57,7 +58,7 @@ public class TracerService {
                 spanExporter = OtlpJsonLoggingSpanExporter.create();
                 break;
             case MERGIFY:
-                spanExporter = new MergifySpanExporter();
+                spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
                 break;
         }
 

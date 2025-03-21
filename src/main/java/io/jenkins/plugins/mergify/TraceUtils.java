@@ -41,8 +41,7 @@ public class TraceUtils {
             span.setStatus(StatusCode.ERROR);
             span.setAttribute("cicd.pipeline.result", "failure");
         } else {
-            span.setAttribute("cicd.pipeline.result", result.toString());
-            LOGGER.warning("unexpected result: " + result);
+            throw new RuntimeException("unexpected result: " + result);
         }
     }
 }

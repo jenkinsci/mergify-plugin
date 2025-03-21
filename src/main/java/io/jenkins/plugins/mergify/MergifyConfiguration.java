@@ -3,6 +3,12 @@ package io.jenkins.plugins.mergify;
 import hudson.Extension;
 import hudson.Util;
 import hudson.util.FormValidation;
+import jenkins.model.GlobalConfiguration;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.verb.POST;
+
+import javax.servlet.ServletException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -10,14 +16,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import javax.servlet.ServletException;
-import jenkins.model.GlobalConfiguration;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.export.Exported;
-import org.kohsuke.stapler.verb.POST;
 
 @Extension
-public class MergifyConfiguration extends GlobalConfiguration {
+public class MergifyConfiguration extends GlobalConfiguration implements MergifyConfigurationProvider {
 
     private List<OrgApiKey> orgApiKeys;
     private String url;
@@ -83,12 +84,16 @@ public class MergifyConfiguration extends GlobalConfiguration {
         }
 
         try {
-            new URL(valueTrim);
+            URL url = new URL(valueTrim);
         } catch (MalformedURLException e) {
             return FormValidation.error("Invalid URL format.");
         }
-
         return FormValidation.ok();
+    }
+
+    // For easier mock testing
+    protected HttpURLConnection openConnection(URL url) throws IOException {
+        return (HttpURLConnection) url.openConnection();
     }
 
     @POST
@@ -96,7 +101,7 @@ public class MergifyConfiguration extends GlobalConfiguration {
             throws IOException, ServletException {
         try {
             URL url = new URL(value);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            HttpURLConnection connection = openConnection(url);
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(3000); // Timeout 3 sec
             connection.setReadTimeout(3000);

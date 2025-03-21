@@ -194,6 +194,6 @@ public class IntegrationTest {
 
         // Step Attributes
         assertEquals("Stage(Checkout)", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
-        assertEquals("Stage(Build)", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        assertEquals("Stage(Build)", spans.get(1).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
     }
 }

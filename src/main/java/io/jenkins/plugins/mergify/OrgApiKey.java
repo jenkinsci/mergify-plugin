@@ -30,7 +30,7 @@ public class OrgApiKey extends AbstractDescribableImpl<OrgApiKey> {
 
     @Override
     public String toString() {
-        return "OrgApiKey{" + "organizationName='" + organizationName + '}';
+        return "OrgApiKey{" + "organizationName='" + organizationName + "'}";
     }
 
     @Extension
