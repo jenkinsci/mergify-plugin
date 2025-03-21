@@ -81,6 +81,7 @@ public class IntegrationTest {
         runCommand(repoDir, "touch README.md");
         runCommand(repoDir, "git add README.md");
         runCommand(repoDir, "git commit -m 'Initial commit'");
+        runCommand(repoDir, "git branch -m main");
         return repoDir;
     }
 
