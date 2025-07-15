@@ -2,6 +2,7 @@ package io.jenkins.plugins.mergify;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
+import hudson.PluginWrapper;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
 import io.opentelemetry.api.common.AttributeKey;
@@ -15,6 +16,8 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+import jenkins.model.Jenkins;
+
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -52,8 +55,19 @@ public class TracerService {
     @Initializer(after = InitMilestone.SYSTEM_CONFIG_ADAPTED, before = InitMilestone.JOB_LOADED)
     public static void init() {
         LOGGER.info("Initializing Mergify Tracer");
-        Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), SERVICE_NAME)));
+
+        PluginWrapper plugin = Jenkins.get().getPluginManager().getPlugin("mergify");
+        String version = plugin.getVersion();
+
+        Resource jenkinsResource = Resource.create(
+                Attributes.of(
+                        AttributeKey.stringKey("service.name"), SERVICE_NAME,
+                        AttributeKey.stringKey("service.version"), version,
+                        AttributeKey.stringKey("service.jenkins_version"), Jenkins.getVersion().toString(),
+                        TraceUtils.CICD_PROVIDER_NAME, "jenkins"
+                )
+        );
+        Resource resource = Resource.getDefault().merge(jenkinsResource);
 
         switch (SPAN_EXPORTER_BACKEND) {
             case MEMORY:
