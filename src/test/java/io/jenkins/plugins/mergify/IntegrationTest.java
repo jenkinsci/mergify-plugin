@@ -53,13 +53,13 @@ public class IntegrationTest {
 
     @Before
     public void before() {
-        InMemorySpanExporter spanExporter = TracerService.getInMemorySpanExpoter();
+        InMemorySpanExporter spanExporter = TracerService.getInMemorySpanExporter();
         spanExporter.reset();
     }
 
     List<SpanData> getSpans() {
         TracerService.forceFlush();
-        InMemorySpanExporter spanExporter = TracerService.getInMemorySpanExpoter();
+        InMemorySpanExporter spanExporter = TracerService.getInMemorySpanExporter();
         return spanExporter.getFinishedSpanItems();
     }
 

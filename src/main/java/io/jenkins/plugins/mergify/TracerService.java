@@ -37,11 +37,11 @@ public class TracerService {
         return tracer;
     }
 
-    public static InMemorySpanExporter getInMemorySpanExpoter() {
+    public static InMemorySpanExporter getInMemorySpanExporter() {
         if (spanExporter instanceof InMemorySpanExporter) {
             return (InMemorySpanExporter) spanExporter;
         }
-        throw new RuntimeException("SpanExporter is not an instance of InMemorySpanExpoter");
+        throw new RuntimeException("SpanExporter is not an instance of InMemorySpanExporter");
     }
 
     public static void forceFlush() {
