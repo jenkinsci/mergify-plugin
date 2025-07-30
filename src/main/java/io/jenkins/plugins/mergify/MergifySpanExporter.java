@@ -4,6 +4,7 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -81,9 +82,6 @@ final class MergifySpanExporter implements SpanExporter {
 
             try {
                 exportResult = exporter.export(spans);
-                exporter.flush();
-                exporter.close();
-                exporter.shutdown();
             } catch (RuntimeException e) {
                 LOGGER.log(Level.WARNING, "Exception thrown by the export.", e);
                 results.add(CompletableResultCode.ofFailure());
