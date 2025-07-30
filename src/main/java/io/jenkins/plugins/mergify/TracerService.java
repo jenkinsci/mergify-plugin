@@ -5,6 +5,7 @@ import hudson.Extension;
 import hudson.PluginWrapper;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
+import hudson.util.VersionNumber;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Tracer;
@@ -16,10 +17,9 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-import jenkins.model.Jenkins;
-
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import jenkins.model.Jenkins;
 
 @Extension
 public class TracerService {
@@ -57,16 +57,19 @@ public class TracerService {
         LOGGER.info("Initializing Mergify Tracer");
 
         PluginWrapper plugin = Jenkins.get().getPluginManager().getPlugin("mergify");
-        String version = plugin.getVersion();
+        String version = (plugin != null && plugin.getVersion() != null) ? plugin.getVersion() : "unknown";
+        VersionNumber jenkinsVersionNumber = Jenkins.getVersion();
+        String jenkinsVersion = jenkinsVersionNumber != null ? jenkinsVersionNumber.toString() : "unknown";
 
-        Resource jenkinsResource = Resource.create(
-                Attributes.of(
-                        AttributeKey.stringKey("service.name"), SERVICE_NAME,
-                        AttributeKey.stringKey("service.version"), version,
-                        AttributeKey.stringKey("service.jenkins_version"), Jenkins.getVersion().toString(),
-                        TraceUtils.CICD_PROVIDER_NAME, "jenkins"
-                )
-        );
+        Resource jenkinsResource = Resource.create(Attributes.of(
+                AttributeKey.stringKey("service.name"),
+                SERVICE_NAME,
+                AttributeKey.stringKey("service.version"),
+                version,
+                AttributeKey.stringKey("service.jenkins_version"),
+                jenkinsVersion,
+                TraceUtils.CICD_PROVIDER_NAME,
+                "jenkins"));
         Resource resource = Resource.getDefault().merge(jenkinsResource);
 
         switch (SPAN_EXPORTER_BACKEND) {
