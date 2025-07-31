@@ -49,7 +49,7 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
 
         Node node = run.getExecutor().getOwner().getNode();
         Set<LabelAtom> labels = node.getAssignedLabels();
-        pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
+        this.pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
     }
 
     static String getRepositoryName(String url) {
