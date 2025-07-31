@@ -5,19 +5,28 @@ import hudson.model.Run;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class TraceUtils {
+
+    public static final AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
     public static final AttributeKey<String> CICD_PIPELINE_NAME = AttributeKey.stringKey("cicd.pipeline.name");
     public static final AttributeKey<String> CICD_PIPELINE_URL = AttributeKey.stringKey("cicd.pipeline.url");
+    public static final AttributeKey<Long> CICD_PIPELINE_RUNNER_ID = AttributeKey.longKey("cicd.pipeline.runner.id");
+    public static final AttributeKey<String> CICD_PIPELINE_RUNNER_NAME =
+            AttributeKey.stringKey("cicd.pipeline.runner.name");
+    public static final AttributeKey<List<String>> CICD_PIPELINE_LABELS =
+            AttributeKey.stringArrayKey("cicd.pipeline.labels");
+    public static final AttributeKey<Long> CICD_PIPELINE_CREATED_AT = AttributeKey.longKey("cicd.pipeline.created.at");
     public static final AttributeKey<String> CICD_PIPELINE_TASK_ID = AttributeKey.stringKey("cicd.pipeline.task.id");
     public static final AttributeKey<String> CICD_PIPELINE_TASK_NAME =
             AttributeKey.stringKey("cicd.pipeline.task.name");
-    public static final AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
     public static final AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
     public static final AttributeKey<String> VCS_REF_BASE_NAME = AttributeKey.stringKey("vcs.ref.base.name");
     public static final AttributeKey<String> VCS_REF_HEAD_REVISION = AttributeKey.stringKey("vcs.ref.head.revision");
     public static final AttributeKey<String> VCS_REPOSITORY_NAME = AttributeKey.stringKey("vcs.repository.name");
+
     public static final AttributeKey<String> VCS_REPOSITORY_URL_FULL =
             AttributeKey.stringKey("vcs.repository.url.full");
     public static final AttributeKey<String> VCS_REPOSITORY_URL_SOURCE =

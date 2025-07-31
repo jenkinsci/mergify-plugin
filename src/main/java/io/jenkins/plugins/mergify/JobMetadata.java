@@ -2,10 +2,8 @@ package io.jenkins.plugins.mergify;
 
 import hudson.EnvVars;
 import hudson.Extension;
-import hudson.model.Job;
-import hudson.model.JobProperty;
-import hudson.model.JobPropertyDescriptor;
-import hudson.model.Run;
+import hudson.model.*;
+import hudson.model.labels.LabelAtom;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
@@ -13,10 +11,12 @@ import io.opentelemetry.api.trace.Span;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 
@@ -25,6 +25,10 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     private final String pipelineName;
     private final String pipelineId;
     private final String pipelineUrl;
+    private final String pipelineRunnerName;
+    private final List<String> pipelineLabels;
+    private final Integer pipelineRunnerId;
+    private final Long pipelineCreatedAt;
     private volatile String SCMCheckoutBranch;
     private volatile String SCMCheckoutCommit;
     private Map<String, String> repositoryURLs;
@@ -34,6 +38,18 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = Jenkins.get().getRootUrl() + run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
+
+        Executor executor = run.getExecutor();
+        Computer computer = executor.getOwner();
+        String nodeName = computer.getName();
+        this.pipelineRunnerName = nodeName.isEmpty() ? "master" : nodeName;
+        this.pipelineRunnerId = executor.getNumber();
+
+        this.pipelineCreatedAt = run.getTimeInMillis();
+
+        Node node = run.getExecutor().getOwner().getNode();
+        Set<LabelAtom> labels = node.getAssignedLabels();
+        pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
     }
 
     static String getRepositoryName(String url) {
@@ -81,7 +97,11 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         span.setAttribute(TraceUtils.CICD_PROVIDER_NAME, "jenkins");
         span.setAttribute(TraceUtils.CICD_PIPELINE_NAME, pipelineName);
         span.setAttribute(TraceUtils.CICD_PIPELINE_ID, pipelineId);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_ID, pipelineRunnerId);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_NAME, pipelineRunnerName);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, pipelineUrl);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
         span.setAttribute(TraceUtils.VCS_REF_BASE_NAME, SCMCheckoutBranch);
         span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
 
