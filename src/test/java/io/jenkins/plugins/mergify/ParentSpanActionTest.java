@@ -2,18 +2,21 @@ package io.jenkins.plugins.mergify;
 
 import static org.junit.Assert.assertEquals;
 
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
 import org.junit.Test;
 
 public class ParentSpanActionTest {
 
     @Test
     public void testParentSpanAction() {
-        String traceId = "trace-123";
-        String spanId = "span-456";
+        TraceState traceState = TraceState.builder().build();
+        SpanContext spanContext = SpanContext.create(
+                "80e1afed08e019fc1110464cfa66635c", "7a085853722dc6d2", TraceFlags.getDefault(), traceState);
 
-        ParentSpanAction action = new ParentSpanAction(traceId, spanId);
+        ParentSpanAction action = new ParentSpanAction(spanContext);
 
-        assertEquals("trace-123", action.getTraceId());
-        assertEquals("span-456", action.getSpanId());
+        assertEquals("00-80e1afed08e019fc1110464cfa66635c-7a085853722dc6d2-01", action.getTraceParent());
     }
 }

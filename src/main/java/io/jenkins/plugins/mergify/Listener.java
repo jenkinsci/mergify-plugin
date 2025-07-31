@@ -83,10 +83,9 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
     }
 
     private static boolean isStageStartNode(FlowNode node) {
-        if (!(node instanceof StepStartNode)) {
+        if (!(node instanceof StepStartNode stepStartNode)) {
             return false;
         }
-        StepStartNode stepStartNode = (StepStartNode) node;
         Descriptor<Step> nodeDescriptor = stepStartNode.getDescriptor();
         return nodeDescriptor instanceof StageStep.DescriptorImpl && node.getAction(LabelAction.class) != null;
     }
@@ -113,8 +112,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         Job<?, ?> job = run.getParent();
 
         // Check if it's a multibranch pipeline with GitHub source
-        if (job instanceof SCMSourceOwner) {
-            SCMSourceOwner scmOwner = (SCMSourceOwner) job;
+        if (job instanceof SCMSourceOwner scmOwner) {
             for (SCMSource source : scmOwner.getSCMSources()) {
                 if (source instanceof GitHubSCMSource) {
                     return ((GitHubSCMSource) source).getRemote();
@@ -125,8 +123,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         // Check if it's a Freestyle job with Git SCM
         if (job instanceof hudson.model.AbstractProject) {
             SCM scm = ((hudson.model.AbstractProject<?, ?>) job).getScm();
-            if (scm instanceof GitSCM) {
-                GitSCM gitSCM = (GitSCM) scm;
+            if (scm instanceof GitSCM gitSCM) {
                 return gitSCM.getRepositories().get(0).getURIs().get(0).toString();
             }
         }
@@ -217,7 +214,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, taskName);
 
         SpanContext spanContext = span.getSpanContext();
-        run.addOrReplaceAction(new ParentSpanAction(spanContext.getTraceId(), spanContext.getSpanId()));
+        run.addOrReplaceAction(new ParentSpanAction(spanContext));
 
         LOGGER.info("Start stage: " + taskName);
     }
@@ -278,7 +275,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             stepSpans.put(step, stepSpan);
 
             SpanContext spanContext = stepSpan.getSpanContext();
-            build.addOrReplaceAction(new ParentSpanAction(spanContext.getTraceId(), spanContext.getSpanId()));
+            build.addOrReplaceAction(new ParentSpanAction(spanContext));
         }
 
         @Override
@@ -344,8 +341,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 LOGGER.info("Got SCM checkout data: " + envVars);
                 jobSpanMetadata.setSCMCheckoutInfoFromEnvs(envVars);
             }
-            if (scm instanceof GitSCM) {
-                GitSCM gitSCM = (GitSCM) scm;
+            if (scm instanceof GitSCM gitSCM) {
                 GitClient client = gitSCM.createClient(listener, envVars, run, workspace);
                 jobSpanMetadata.setSCMCheckoutInfoFromGitSCM(gitSCM, client);
             }
