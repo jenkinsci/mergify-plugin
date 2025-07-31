@@ -38,18 +38,29 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = Jenkins.get().getRootUrl() + run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
-
-        Executor executor = run.getExecutor();
-        Computer computer = executor.getOwner();
-        String nodeName = computer.getName();
-        this.pipelineRunnerName = nodeName.isEmpty() ? "master" : nodeName;
-        this.pipelineRunnerId = executor.getNumber();
-
         this.pipelineCreatedAt = run.getTimeInMillis();
 
-        Node node = run.getExecutor().getOwner().getNode();
-        Set<LabelAtom> labels = node.getAssignedLabels();
-        this.pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
+        Executor executor = run.getExecutor();
+        if (executor == null) {
+            LOGGER.warning("Run executor is null, cannot set pipeline runner info");
+            this.pipelineRunnerId = null;
+            this.pipelineRunnerName = null;
+            this.pipelineLabels = List.of();
+            return;
+        }
+
+        Computer computer = executor.getOwner();
+        String nodeName = computer.getName();
+        this.pipelineRunnerId = executor.getNumber();
+        this.pipelineRunnerName = nodeName.isEmpty() ? "master" : nodeName;
+
+        Node node = executor.getOwner().getNode();
+        if (node == null) {
+            this.pipelineLabels = List.of();
+        } else {
+            Set<LabelAtom> labels = node.getAssignedLabels();
+            this.pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
+        }
     }
 
     static String getRepositoryName(String url) {
@@ -97,13 +108,17 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         span.setAttribute(TraceUtils.CICD_PROVIDER_NAME, "jenkins");
         span.setAttribute(TraceUtils.CICD_PIPELINE_NAME, pipelineName);
         span.setAttribute(TraceUtils.CICD_PIPELINE_ID, pipelineId);
-        span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_ID, pipelineRunnerId);
-        span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_NAME, pipelineRunnerName);
         span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
         span.setAttribute(TraceUtils.VCS_REF_BASE_NAME, SCMCheckoutBranch);
         span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
+        if (pipelineRunnerId != null) {
+            span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_ID, pipelineRunnerId);
+        }
+        if (pipelineRunnerName != null) {
+            span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_NAME, pipelineRunnerName);
+        }
 
         for (Map.Entry<String, String> entry : repositoryURLs.entrySet()) {
             String name = entry.getKey();

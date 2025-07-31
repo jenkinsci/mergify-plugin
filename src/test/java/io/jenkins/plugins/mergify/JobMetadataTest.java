@@ -31,6 +31,7 @@ public class JobMetadataTest {
 
     @Before
     public void setUp() throws IOException, ExecutionException, InterruptedException {
+        jenkinsRule.jenkins.setNumExecutors(2);
         FreeStyleProject project = jenkinsRule.createFreeStyleProject("test-job");
         FreeStyleBuild build = project.scheduleBuild2(0).get();
         jobMetadata = new JobMetadata(build);
