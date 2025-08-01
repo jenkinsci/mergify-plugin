@@ -1,5 +1,8 @@
 package io.jenkins.plugins.mergify;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
 import hudson.model.FreeStyleProject;
@@ -13,22 +16,18 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
 
 public class IntegrationTest {
     private static final Logger LOGGER = Logger.getLogger(IntegrationTest.class.getName());
@@ -120,8 +119,8 @@ public class IntegrationTest {
         for (SpanData span : spans) {
             Map<AttributeKey<?>, Object> attributes = span.getAttributes().asMap();
             assertEquals("jenkins", attributes.get(TraceUtils.CICD_PROVIDER_NAME));
-            assertEquals("test-freestyle #1", attributes.get(TraceUtils.CICD_PIPELINE_NAME));
-            assertEquals("test-freestyle#1", attributes.get(TraceUtils.CICD_PIPELINE_ID));
+            assertEquals("test-freestyle", attributes.get(TraceUtils.CICD_PIPELINE_NAME));
+            assertEquals("test-freestyle#1", attributes.get(TraceUtils.CICD_PIPELINE_RUN_ID));
             assertTrue(
                     ((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-freestyle/1/"));
             assertEquals("main", attributes.get(TraceUtils.VCS_REF_BASE_NAME));
@@ -132,7 +131,7 @@ public class IntegrationTest {
         }
 
         // Step Attributes
-        assertEquals("Shell", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        assertEquals("Execute shell", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
     }
 
     @Test
@@ -179,8 +178,8 @@ public class IntegrationTest {
         for (SpanData span : spans) {
             Map<AttributeKey<?>, Object> attributes = span.getAttributes().asMap();
             assertEquals("jenkins", attributes.get(TraceUtils.CICD_PROVIDER_NAME));
-            assertEquals("test-pipeline #1", attributes.get(TraceUtils.CICD_PIPELINE_NAME));
-            assertEquals("test-pipeline#1", attributes.get(TraceUtils.CICD_PIPELINE_ID));
+            assertEquals("test-pipeline", attributes.get(TraceUtils.CICD_PIPELINE_NAME));
+            assertEquals("test-pipeline#1", attributes.get(TraceUtils.CICD_PIPELINE_RUN_ID));
             assertTrue(
                     ((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-pipeline/1/"));
             assertEquals("main", attributes.get(TraceUtils.VCS_REF_BASE_NAME));
@@ -191,7 +190,8 @@ public class IntegrationTest {
         }
 
         // Step Attributes expected:<Stage([Checkout])> but was:<Stage([{ (Checkout)])>
-        assertEquals("Stage({ (Checkout))", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        assertEquals(
+                "Stage({ (Checkout))", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
         assertEquals("Stage({ (Build))", spans.get(1).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
     }
 }

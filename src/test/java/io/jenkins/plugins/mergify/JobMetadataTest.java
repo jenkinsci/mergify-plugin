@@ -51,7 +51,7 @@ public class JobMetadataTest {
         // Some required info are missing, ensure attributes are not set
         verify(span, never()).setAttribute(eq(TraceUtils.CICD_PROVIDER_NAME), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_NAME), anyString());
-        verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_ID), anyString());
+        verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_RUN_ID), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.VCS_REF_BASE_NAME), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.VCS_REF_HEAD_REVISION), anyString());
@@ -74,8 +74,8 @@ public class JobMetadataTest {
         jobMetadata.setCommonSpanAttributes(span);
 
         verify(span).setAttribute(TraceUtils.CICD_PROVIDER_NAME, "jenkins");
-        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_NAME, "test-job #1");
-        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_ID, "test-job#1");
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_NAME, "test-job");
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUN_ID, "test-job#1");
         verify(span).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), contains("/jenkins/job/test-job/1/"));
         verify(span).setAttribute(TraceUtils.VCS_REF_BASE_NAME, "main");
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, "abcdef123456");
@@ -96,8 +96,8 @@ public class JobMetadataTest {
         jobMetadata.setCommonSpanAttributes(span);
 
         verify(span).setAttribute(TraceUtils.CICD_PROVIDER_NAME, "jenkins");
-        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_NAME, "test-job #1");
-        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_ID, "test-job#1");
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_NAME, "test-job");
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUN_ID, "test-job#1");
         verify(span).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), contains("/jenkins/job/test-job/1/"));
         verify(span).setAttribute(TraceUtils.VCS_REF_BASE_NAME, "main");
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, "abcdef123456");

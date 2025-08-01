@@ -8,9 +8,6 @@ import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
 import io.opentelemetry.api.trace.Span;
-import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.gitclient.GitClient;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +17,8 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
 
 public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
@@ -37,8 +36,8 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     public JobMetadata(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
         this.pipelineName = job.getFullDisplayName();
-        this.pipelineId = job.getFullDisplayName();
-        this.pipelineUrl = Jenkins.get().getRootUrl() + run.getUrl();
+        this.pipelineId = run.getExternalizableId();
+        this.pipelineUrl = run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
 
         this.pipelineCreatedAt = run.getTimeInMillis();
@@ -110,9 +109,9 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
 
         span.setAttribute(TraceUtils.CICD_PROVIDER_NAME, "jenkins");
         span.setAttribute(TraceUtils.CICD_PIPELINE_NAME, pipelineName);
-        span.setAttribute(TraceUtils.CICD_PIPELINE_ID, pipelineId);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_RUN_ID, pipelineId);
         span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
-        span.setAttribute(TraceUtils.CICD_PIPELINE_URL, pipelineUrl);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
         span.setAttribute(TraceUtils.VCS_REF_BASE_NAME, SCMCheckoutBranch);
         span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
