@@ -54,6 +54,7 @@ public class TraceUtils {
 
     // FIXME: remove me we use CICD_PIPELINE_TASK_SCOPE instead
     public static final AttributeKey<String> CICD_PIPELINE_SCOPE = AttributeKey.stringKey("cicd.pipeline.scope");
+    public static final AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
 
     private static final Logger LOGGER = Logger.getLogger(TraceUtils.class.getName());
 

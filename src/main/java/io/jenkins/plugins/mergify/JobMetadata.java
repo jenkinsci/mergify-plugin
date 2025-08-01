@@ -110,6 +110,8 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         span.setAttribute(TraceUtils.CICD_PROVIDER_NAME, "jenkins");
         span.setAttribute(TraceUtils.CICD_PIPELINE_NAME, pipelineName);
         span.setAttribute(TraceUtils.CICD_PIPELINE_RUN_ID, pipelineId);
+        // deprecated, but kept for compatibility
+        span.setAttribute(TraceUtils.CICD_PIPELINE_ID, pipelineId);
         span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
