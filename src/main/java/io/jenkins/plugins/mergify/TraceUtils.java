@@ -45,6 +45,7 @@ public class TraceUtils {
             AttributeKey.stringKey("cicd.pipeline.task.run.result");
 
     public static final AttributeKey<String> VCS_REF_BASE_NAME = AttributeKey.stringKey("vcs.ref.base.name");
+    public static final AttributeKey<String> VCS_REF_HEAD_NAME = AttributeKey.stringKey("vcs.ref.head.name");
     public static final AttributeKey<String> VCS_REF_HEAD_REVISION = AttributeKey.stringKey("vcs.ref.head.revision");
     public static final AttributeKey<String> VCS_REPOSITORY_NAME = AttributeKey.stringKey("vcs.repository.name");
     public static final AttributeKey<String> VCS_REPOSITORY_URL_FULL =

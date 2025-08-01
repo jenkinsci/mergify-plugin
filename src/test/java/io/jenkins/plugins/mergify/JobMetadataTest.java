@@ -1,15 +1,9 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.*;
-
 import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import io.opentelemetry.api.trace.Span;
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,6 +11,13 @@ import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 public class JobMetadataTest {
@@ -53,7 +54,7 @@ public class JobMetadataTest {
         verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_NAME), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_RUN_ID), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), anyString());
-        verify(span, never()).setAttribute(eq(TraceUtils.VCS_REF_BASE_NAME), anyString());
+        verify(span, never()).setAttribute(eq(TraceUtils.VCS_REF_HEAD_NAME), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.VCS_REF_HEAD_REVISION), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.VCS_REPOSITORY_URL_FULL), anyString());
         verify(span, never()).setAttribute(eq(TraceUtils.VCS_REPOSITORY_URL_SOURCE), anyString());
@@ -77,7 +78,7 @@ public class JobMetadataTest {
         verify(span).setAttribute(TraceUtils.CICD_PIPELINE_NAME, "test-job");
         verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUN_ID, "test-job#1");
         verify(span).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), contains("/jenkins/job/test-job/1/"));
-        verify(span).setAttribute(TraceUtils.VCS_REF_BASE_NAME, "main");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "main");
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, "abcdef123456");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo-project.git");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "PROJECT");
@@ -99,7 +100,7 @@ public class JobMetadataTest {
         verify(span).setAttribute(TraceUtils.CICD_PIPELINE_NAME, "test-job");
         verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUN_ID, "test-job#1");
         verify(span).setAttribute(eq(TraceUtils.CICD_PIPELINE_URL), contains("/jenkins/job/test-job/1/"));
-        verify(span).setAttribute(TraceUtils.VCS_REF_BASE_NAME, "main");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "main");
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, "abcdef123456");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo.git");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "SCMCheckoutURL");

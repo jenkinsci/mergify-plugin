@@ -1,8 +1,5 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
 import hudson.model.FreeStyleProject;
@@ -16,18 +13,22 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
-import java.io.File;
-import java.nio.file.Files;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class IntegrationTest {
     private static final Logger LOGGER = Logger.getLogger(IntegrationTest.class.getName());
@@ -123,7 +124,7 @@ public class IntegrationTest {
             assertEquals("test-freestyle#1", attributes.get(TraceUtils.CICD_PIPELINE_RUN_ID));
             assertTrue(
                     ((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-freestyle/1/"));
-            assertEquals("main", attributes.get(TraceUtils.VCS_REF_BASE_NAME));
+            assertEquals("main", attributes.get(TraceUtils.VCS_REF_HEAD_NAME));
             assertEquals(commit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
             assertEquals("https://github.com/mergifyio/plugin/", attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
             assertEquals("GitHubProjectProperty", attributes.get(TraceUtils.VCS_REPOSITORY_URL_SOURCE));
@@ -182,7 +183,7 @@ public class IntegrationTest {
             assertEquals("test-pipeline#1", attributes.get(TraceUtils.CICD_PIPELINE_RUN_ID));
             assertTrue(
                     ((String) attributes.get(TraceUtils.CICD_PIPELINE_URL)).contains("/jenkins/job/test-pipeline/1/"));
-            assertEquals("main", attributes.get(TraceUtils.VCS_REF_BASE_NAME));
+            assertEquals("main", attributes.get(TraceUtils.VCS_REF_HEAD_NAME));
             assertEquals(commit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
             assertEquals("https://github.com/mergifyio/plugin/", attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
             assertEquals("GitHubProjectProperty", attributes.get(TraceUtils.VCS_REPOSITORY_URL_SOURCE));

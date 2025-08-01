@@ -112,7 +112,9 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
         if (SCMCheckoutBranch != null) {
-            span.setAttribute(TraceUtils.VCS_REF_BASE_NAME, SCMCheckoutBranch.replaceFirst("^[^/]+/", ""));
+            span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, SCMCheckoutBranch.replaceFirst("^[^/]+/", ""));
+        } else {
+            span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "<unknown>");
         }
         span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
         if (pipelineRunnerId != null) {
