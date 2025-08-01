@@ -149,13 +149,13 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
     // Pipeline and Freestyle Job listener
     public void onStarted(Run<?, ?> run, @NonNull TaskListener listener) {
-        LOGGER.info("build " + run.getDisplayName() + " started");
+        LOGGER.info("build " + run.getFullDisplayName() + " started");
         startRootSpan(run);
     }
 
     // Pipeline and Freestyle Job listener
     public void onCompleted(Run<?, ?> run, @Nonnull TaskListener listener) {
-        LOGGER.info("build " + run.getDisplayName() + " completed");
+        LOGGER.info("build " + run.getFullDisplayName() + " completed");
         endRootSpan(run);
     }
 
@@ -164,7 +164,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             return;
         }
         Tracer tracer = TracerService.getTracer();
-        Span span = tracer.spanBuilder(run.getDisplayName())
+        Span span = tracer.spanBuilder(run.getFullDisplayName())
                 .setSpanKind(SpanKind.SERVER)
                 .startSpan();
         span.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "job");
@@ -204,7 +204,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         }
         Context parentContext = Context.current().with(parentSpan);
         Tracer tracer = TracerService.getTracer();
-        SpanBuilder builder = tracer.spanBuilder(node.getDisplayName())
+        SpanBuilder builder = tracer.spanBuilder(node.getDisplayFunctionName())
                 .setSpanKind(SpanKind.INTERNAL)
                 .setParent(parentContext);
         Span span = builder.startSpan();
@@ -213,7 +213,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
         StepStartNode stepStartNode = (StepStartNode) node;
 
-        String taskName = "Stage(" + stepStartNode.getDisplayName() + ")";
+        String taskName = "Stage(" + stepStartNode.getDisplayFunctionName() + ")";
         span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, taskName);
 
         SpanContext spanContext = span.getSpanContext();
@@ -272,7 +272,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 return;
             }
             Tracer tracer = TracerService.getTracer();
-            Span stepSpan = tracer.spanBuilder("Jenkins Step: " + step)
+            Span stepSpan = tracer.spanBuilder("Jenkins Step: " + step.toString())
                     .setParent(io.opentelemetry.context.Context.current().with(parentSpan))
                     .setSpanKind(SpanKind.INTERNAL)
                     .startSpan();
