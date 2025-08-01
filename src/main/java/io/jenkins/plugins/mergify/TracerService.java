@@ -15,8 +15,9 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
@@ -83,10 +84,14 @@ public class TracerService {
                 spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
                 break;
         }
-
+        BatchSpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter)
+                .setExporterTimeout(Duration.ofSeconds(60))
+                .setMaxExportBatchSize(10000)
+                .setExportUnsampledSpans(true)
+                .build();
         sdkTracerProvider = SdkTracerProvider.builder()
                 .setResource(resource)
-                .addSpanProcessor(SimpleSpanProcessor.builder(spanExporter).build())
+                .addSpanProcessor(spanProcessor)
                 .build();
 
         OpenTelemetrySdk sdk =

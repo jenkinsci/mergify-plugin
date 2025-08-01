@@ -4,14 +4,10 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
-import hudson.plugins.git.BranchSpec;
-import hudson.plugins.git.GitSCM;
-import hudson.plugins.git.UserRemoteConfig;
+import hudson.plugins.git.*;
+import hudson.plugins.git.util.BuildData;
 import io.opentelemetry.api.trace.Span;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -115,7 +111,9 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
-        span.setAttribute(TraceUtils.VCS_REF_BASE_NAME, SCMCheckoutBranch);
+        if (SCMCheckoutBranch != null) {
+            span.setAttribute(TraceUtils.VCS_REF_BASE_NAME, SCMCheckoutBranch.replaceFirst("^[^/]+/", ""));
+        }
         span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
         if (pipelineRunnerId != null) {
             span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_ID, pipelineRunnerId);
@@ -147,11 +145,34 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
 
     public void setSCMCheckoutInfoFromEnvs(EnvVars envVars) {
         addRepositoryURL("SCMCheckoutURL", envVars.get("GIT_URL"));
+        if (SCMCheckoutBranch != null && SCMCheckoutCommit != null) {
+            return;
+        }
         SCMCheckoutCommit = envVars.get("GIT_COMMIT");
         SCMCheckoutBranch = envVars.get("GIT_BRANCH");
-        if (SCMCheckoutBranch != null) {
-            // Removes "origin/" or any "remote/"
-            SCMCheckoutBranch = SCMCheckoutBranch.replaceFirst("^[^/]+/", "");
+    }
+
+    public void setSCMCheckoutInfoFromBuildData(Run<?, ?> run) {
+        if (SCMCheckoutBranch != null && SCMCheckoutCommit != null) return;
+
+        BuildData data = run.getAction(BuildData.class);
+        if (data == null) return;
+
+        Revision revision = data.getLastBuiltRevision();
+        if (revision == null) return;
+
+        Collection<String> urls = data.getRemoteUrls();
+        for (String url : urls) {
+            addRepositoryURL("SCMCheckoutURL", url);
+            break;
+        }
+
+        SCMCheckoutCommit = data.getLastBuiltRevision().getSha1String();
+
+        Collection<Branch> branches = revision.getBranches();
+        for (Branch branch : branches) {
+            SCMCheckoutBranch = branch.getName();
+            break;
         }
     }
 
@@ -167,11 +188,6 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         // Retrieve branch
         List<BranchSpec> branches = gitSCM.getBranches();
         SCMCheckoutBranch = branches.isEmpty() ? null : branches.get(0).getName();
-        if (SCMCheckoutBranch != null) {
-            // Removes "origin/" or any "remote/"
-            SCMCheckoutBranch = SCMCheckoutBranch.replaceFirst("^[^/]+/", "");
-        }
-
         SCMCheckoutCommit = client.revParse("HEAD").name();
     }
 

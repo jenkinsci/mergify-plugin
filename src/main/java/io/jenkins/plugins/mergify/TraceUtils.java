@@ -63,10 +63,12 @@ public class TraceUtils {
             LOGGER.warning("Got completed job without span");
             return;
         }
+
         JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
         if (jobSpanMetadata == null) {
             LOGGER.warning("Got completed stage/step no job metadata");
         } else {
+            jobSpanMetadata.setSCMCheckoutInfoFromBuildData(run);
             jobSpanMetadata.setCommonSpanAttributes(span);
         }
         Result result = run.getResult();
@@ -113,7 +115,9 @@ public class TraceUtils {
             span.end();
             return;
         }
+
         jobSpanMetadata.setCommonSpanAttributes(span);
+
         if (isError) {
             span.setAttribute(CICD_PIPELINE_TASK_RUN_RESULT, "failure");
             span.setStatus(StatusCode.ERROR);

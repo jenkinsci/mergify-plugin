@@ -193,6 +193,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 File changelogFile,
                 SCMRevisionState pollingBaseline)
                 throws IOException, InterruptedException {
+            LOGGER.info("SCM checkout hooks!");
 
             JobMetadata<?> jobSpanMetadata = TraceUtils.getJobMetadata(run);
             if (jobSpanMetadata == null) {
