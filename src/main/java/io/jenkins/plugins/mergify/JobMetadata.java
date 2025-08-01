@@ -160,21 +160,21 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         BuildData data = run.getAction(BuildData.class);
         if (data == null) return;
 
-        Revision revision = data.getLastBuiltRevision();
-        if (revision == null) return;
-
         Collection<String> urls = data.getRemoteUrls();
         for (String url : urls) {
             addRepositoryURL("SCMCheckoutURL", url);
             break;
         }
 
-        SCMCheckoutCommit = data.getLastBuiltRevision().getSha1String();
+        Revision revision = data.getLastBuiltRevision();
+        if (revision != null) {
+            SCMCheckoutCommit = revision.getSha1String();
 
-        Collection<Branch> branches = revision.getBranches();
-        for (Branch branch : branches) {
-            SCMCheckoutBranch = branch.getName();
-            break;
+            Collection<Branch> branches = revision.getBranches();
+            for (Branch branch : branches) {
+                SCMCheckoutBranch = branch.getName();
+                break;
+            }
         }
     }
 
