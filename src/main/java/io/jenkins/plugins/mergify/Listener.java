@@ -252,7 +252,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         span.setStatus(StatusCode.OK);
         span.end();
 
-        String taskName = "Stage(" + stepStartNode.getDisplayName() + ")";
+        String taskName = "Stage(" + stepStartNode.getDisplayFunctionName() + ")";
         LOGGER.info("Stop stage: " + taskName);
     }
 
@@ -352,6 +352,8 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             if (scm instanceof GitSCM gitSCM) {
                 GitClient client = gitSCM.createClient(listener, envVars, run, workspace);
                 jobSpanMetadata.setSCMCheckoutInfoFromGitSCM(gitSCM, client);
+            } else {
+                LOGGER.info("SCM is not GitSCM, skipping checkout info");
             }
         }
     }

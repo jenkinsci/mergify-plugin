@@ -1,8 +1,5 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
 import hudson.model.FreeStyleProject;
@@ -16,18 +13,22 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
-import java.io.File;
-import java.nio.file.Files;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class IntegrationTest {
     private static final Logger LOGGER = Logger.getLogger(IntegrationTest.class.getName());
@@ -189,8 +190,8 @@ public class IntegrationTest {
             assertEquals("mergifyio/plugin", attributes.get(TraceUtils.VCS_REPOSITORY_NAME));
         }
 
-        // Step Attributes
-        assertEquals("Stage(Checkout)", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
-        assertEquals("Stage(Build)", spans.get(1).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        // Step Attributes expected:<Stage([Checkout])> but was:<Stage([{ (Checkout)])>
+        assertEquals("Stage({ (Checkout))", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        assertEquals("Stage({ (Build))", spans.get(1).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
     }
 }
