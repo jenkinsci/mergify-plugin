@@ -175,7 +175,6 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             LOGGER.warning("Got start RootSpan  without job metadata");
             return;
         }
-        jobSpanMetadata.setJobStartAttributes(run);
         jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(run));
         jobSpanMetadata.addRepositoryURL("SCMRemoteURL", getSCMRepositoryUrl(run));
     }
@@ -191,6 +190,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             LOGGER.warning("Got completed step no job metadata ");
             return;
         }
+        jobSpanMetadata.setJobEndAttributes(run);
         jobSpanMetadata.setCommonSpanAttributes(span);
         TraceUtils.setSpanStatusFromResult(span, run);
         span.end();

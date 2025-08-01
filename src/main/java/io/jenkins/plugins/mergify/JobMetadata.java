@@ -149,7 +149,7 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         SCMCheckoutCommit = client.revParse("HEAD").name();
     }
 
-    public void setJobStartAttributes(Run<?, ?> run) {
+    public void setJobEndAttributes(Run<?, ?> run) {
         this.pipelineCreatedAt = run.getTimeInMillis();
 
         Executor executor = run.getExecutor();
