@@ -9,14 +9,6 @@
     <relativePath />
   </parent>
 
-  <developers>
-    <developer>
-      <id>sileht</id>
-      <name>Mehdi Abaakouk</name>
-      <email>sileht@sileht.net</email>
-    </developer>
-  </developers>
-
   <groupId>com.mergify.jenkins.plugins</groupId>
   <artifactId>mergify</artifactId>
   <version>${revision}${changelist}</version>
