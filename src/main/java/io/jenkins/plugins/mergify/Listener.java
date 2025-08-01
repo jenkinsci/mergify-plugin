@@ -190,9 +190,8 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             LOGGER.warning("Got completed step no job metadata ");
             return;
         }
-        jobSpanMetadata.setJobEndAttributes(run);
         jobSpanMetadata.setCommonSpanAttributes(span);
-        TraceUtils.setSpanStatusFromResult(span, run);
+        TraceUtils.setSpanJobStatusFromResult(span, run);
         span.end();
     }
 
@@ -246,8 +245,10 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
         ErrorAction error = stepEndNode.getError();
         if (error != null) {
+            span.setAttribute("cicd.pipeline.task.run.result", "failure");
             span.setStatus(StatusCode.ERROR);
         }
+        span.setAttribute("cicd.pipeline.task.run.result", "success");
         span.setStatus(StatusCode.OK);
         span.end();
 
@@ -306,8 +307,10 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                     TraceUtils.CICD_PIPELINE_TASK_NAME, step.getClass().getSimpleName());
 
             if (canContinue) {
+                span.setAttribute("cicd.pipeline.task.run.result", "success");
                 span.setStatus(StatusCode.OK);
             } else {
+                span.setAttribute("cicd.pipeline.task.run.result", "failure");
                 span.setStatus(StatusCode.ERROR);
             }
             span.end();

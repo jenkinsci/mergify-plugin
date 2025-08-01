@@ -20,7 +20,7 @@ public class TraceUtils {
             AttributeKey.stringKey("cicd.pipeline.runner.name");
     public static final AttributeKey<List<String>> CICD_PIPELINE_LABELS =
             AttributeKey.stringArrayKey("cicd.pipeline.labels");
-    public static final AttributeKey<Long> CICD_PIPELINE_CREATED_AT = AttributeKey.longKey("cicd.pipeline.created.at");
+    public static final AttributeKey<Long> CICD_PIPELINE_CREATED_AT = AttributeKey.longKey("cicd.pipeline.created_at");
     public static final AttributeKey<String> CICD_PIPELINE_TASK_ID = AttributeKey.stringKey("cicd.pipeline.task.id");
     public static final AttributeKey<String> CICD_PIPELINE_TASK_NAME =
             AttributeKey.stringKey("cicd.pipeline.task.name");
@@ -35,7 +35,7 @@ public class TraceUtils {
             AttributeKey.stringKey("vcs.repository.url.source");
     private static final Logger LOGGER = Logger.getLogger(TraceUtils.class.getName());
 
-    public static void setSpanStatusFromResult(Span span, Run<?, ?> run) {
+    public static void setSpanJobStatusFromResult(Span span, Run<?, ?> run) {
         Result result = run.getResult();
         if (result == null) {
             span.setAttribute("cicd.pipeline.result", "unknown");
@@ -51,6 +51,27 @@ public class TraceUtils {
         } else if (result.equals(Result.ABORTED) || result.equals(Result.FAILURE) || result.equals(Result.UNSTABLE)) {
             span.setStatus(StatusCode.ERROR);
             span.setAttribute("cicd.pipeline.result", "failure");
+        } else {
+            throw new RuntimeException("unexpected result: " + result);
+        }
+    }
+
+    public static void setSpanStepStatusFromResult(Span span, Run<?, ?> run) {
+        Result result = run.getResult();
+        if (result == null) {
+            span.setAttribute("cicd.pipeline.task.run.result", "unknown");
+            LOGGER.warning("got null result");
+            return;
+        }
+        if (result.equals(Result.SUCCESS)) {
+            span.setStatus(StatusCode.OK);
+            span.setAttribute("cicd.pipeline.task.run.result", "success");
+        } else if (result.equals(Result.NOT_BUILT)) {
+            span.setStatus(StatusCode.OK);
+            span.setAttribute("cicd.pipeline.task.run.result", "skipped");
+        } else if (result.equals(Result.ABORTED) || result.equals(Result.FAILURE) || result.equals(Result.UNSTABLE)) {
+            span.setStatus(StatusCode.ERROR);
+            span.setAttribute("cicd.pipeline.task.run.result", "failure");
         } else {
             throw new RuntimeException("unexpected result: " + result);
         }
