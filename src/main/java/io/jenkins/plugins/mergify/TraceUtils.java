@@ -5,6 +5,7 @@ import hudson.model.Run;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
+
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -13,6 +14,7 @@ public class TraceUtils {
     public static final AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
     public static final AttributeKey<String> CICD_PIPELINE_NAME = AttributeKey.stringKey("cicd.pipeline.name");
     public static final AttributeKey<String> CICD_PIPELINE_URL = AttributeKey.stringKey("cicd.pipeline.url");
+    public static final AttributeKey<String> CICD_PIPELINE_SCOPE = AttributeKey.stringKey("cicd.pipeline.scope");
     public static final AttributeKey<Long> CICD_PIPELINE_RUNNER_ID = AttributeKey.longKey("cicd.pipeline.runner.id");
     public static final AttributeKey<String> CICD_PIPELINE_RUNNER_NAME =
             AttributeKey.stringKey("cicd.pipeline.runner.name");

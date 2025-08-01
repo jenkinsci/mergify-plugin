@@ -8,6 +8,9 @@ import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
 import io.opentelemetry.api.trace.Span;
+import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,18 +20,16 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.gitclient.GitClient;
 
 public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
     private final String pipelineName;
     private final String pipelineId;
     private final String pipelineUrl;
-    private final String pipelineRunnerName;
-    private final List<String> pipelineLabels;
-    private final Integer pipelineRunnerId;
-    private final Long pipelineCreatedAt;
+    private String pipelineRunnerName;
+    private List<String> pipelineLabels;
+    private Integer pipelineRunnerId;
+    private Long pipelineCreatedAt;
     private volatile String SCMCheckoutBranch;
     private volatile String SCMCheckoutCommit;
     private Map<String, String> repositoryURLs;
@@ -38,29 +39,6 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = Jenkins.get().getRootUrl() + run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
-        this.pipelineCreatedAt = run.getTimeInMillis();
-
-        Executor executor = run.getExecutor();
-        if (executor == null) {
-            LOGGER.warning("Run executor is null, cannot set pipeline runner info");
-            this.pipelineRunnerId = null;
-            this.pipelineRunnerName = null;
-            this.pipelineLabels = List.of();
-            return;
-        }
-
-        Computer computer = executor.getOwner();
-        String nodeName = computer.getName();
-        this.pipelineRunnerId = executor.getNumber();
-        this.pipelineRunnerName = nodeName.isEmpty() ? "master" : nodeName;
-
-        Node node = executor.getOwner().getNode();
-        if (node == null) {
-            this.pipelineLabels = List.of();
-        } else {
-            Set<LabelAtom> labels = node.getAssignedLabels();
-            this.pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
-        }
     }
 
     static String getRepositoryName(String url) {
@@ -169,6 +147,32 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         }
 
         SCMCheckoutCommit = client.revParse("HEAD").name();
+    }
+
+    public void setJobStartAttributes(Run<?, ?> run) {
+        this.pipelineCreatedAt = run.getTimeInMillis();
+
+        Executor executor = run.getExecutor();
+        if (executor == null) {
+            LOGGER.warning("Run executor is null, cannot set pipeline runner info");
+            this.pipelineRunnerId = null;
+            this.pipelineRunnerName = null;
+            this.pipelineLabels = List.of();
+            return;
+        }
+
+        Computer computer = executor.getOwner();
+        String nodeName = computer.getName();
+        this.pipelineRunnerId = executor.getNumber();
+        this.pipelineRunnerName = nodeName.isEmpty() ? "master" : nodeName;
+
+        Node node = executor.getOwner().getNode();
+        if (node == null) {
+            this.pipelineLabels = List.of();
+        } else {
+            Set<LabelAtom> labels = node.getAssignedLabels();
+            this.pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
+        }
     }
 
     @Extension

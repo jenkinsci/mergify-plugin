@@ -16,11 +16,6 @@ import hudson.tasks.Builder;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
@@ -35,6 +30,12 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -166,6 +167,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         Span span = tracer.spanBuilder(run.getDisplayName())
                 .setSpanKind(SpanKind.SERVER)
                 .startSpan();
+        span.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "job");
         buildSpans.put(run, span);
 
         JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
@@ -173,6 +175,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             LOGGER.warning("Got start RootSpan  without job metadata");
             return;
         }
+        jobSpanMetadata.setJobStartAttributes(run);
         jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(run));
         jobSpanMetadata.addRepositoryURL("SCMRemoteURL", getSCMRepositoryUrl(run));
     }
@@ -206,6 +209,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 .setSpanKind(SpanKind.INTERNAL)
                 .setParent(parentContext);
         Span span = builder.startSpan();
+        span.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "step");
         stageSpans.put(node, span);
 
         StepStartNode stepStartNode = (StepStartNode) node;
@@ -271,6 +275,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                     .setParent(io.opentelemetry.context.Context.current().with(parentSpan))
                     .setSpanKind(SpanKind.INTERNAL)
                     .startSpan();
+            stepSpan.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "step");
 
             stepSpans.put(step, stepSpan);
 
