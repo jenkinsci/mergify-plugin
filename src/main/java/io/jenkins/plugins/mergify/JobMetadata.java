@@ -35,8 +35,9 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     private Map<String, String> repositoryURLs;
 
     public JobMetadata(Run<?, ?> run) {
-        this.pipelineName = run.getFullDisplayName();
-        this.pipelineId = run.getExternalizableId();
+        Job<?, ?> job = run.getParent();
+        this.pipelineName = job.getFullDisplayName();
+        this.pipelineId = job.getFullDisplayName();
         this.pipelineUrl = Jenkins.get().getRootUrl() + run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
 

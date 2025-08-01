@@ -163,11 +163,16 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         if (run == null) {
             return;
         }
+        Job<?, ?> job = run.getParent();
+
         Tracer tracer = TracerService.getTracer();
-        Span span = tracer.spanBuilder(run.getFullDisplayName())
+        Span span = tracer.spanBuilder(job.getFullDisplayName())
                 .setSpanKind(SpanKind.SERVER)
                 .startSpan();
         span.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "job");
+        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_SCOPE, "job");
+        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, job.getFullDisplayName());
+        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_ID, job.getFullDisplayName());
         buildSpans.put(run, span);
 
         JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
@@ -209,12 +214,14 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 .setParent(parentContext);
         Span span = builder.startSpan();
         span.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "step");
+        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_SCOPE, "step");
         stageSpans.put(node, span);
 
         StepStartNode stepStartNode = (StepStartNode) node;
 
         String taskName = "Stage(" + stepStartNode.getDisplayFunctionName() + ")";
         span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, taskName);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_TASK_ID, stepStartNode.getId());
 
         SpanContext spanContext = span.getSpanContext();
         run.addOrReplaceAction(new ParentSpanAction(spanContext));
@@ -272,11 +279,14 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 return;
             }
             Tracer tracer = TracerService.getTracer();
-            Span stepSpan = tracer.spanBuilder("Jenkins Step: " + step.toString())
+            Span stepSpan = tracer.spanBuilder(step.getClass().getSimpleName())
                     .setParent(io.opentelemetry.context.Context.current().with(parentSpan))
                     .setSpanKind(SpanKind.INTERNAL)
                     .startSpan();
             stepSpan.setAttribute(TraceUtils.CICD_PIPELINE_SCOPE, "step");
+            stepSpan.setAttribute(TraceUtils.CICD_PIPELINE_TASK_SCOPE, "step");
+            stepSpan.setAttribute(TraceUtils.CICD_PIPELINE_TASK_NAME, step.getClass().getSimpleName());
+            stepSpan.setAttribute(TraceUtils.CICD_PIPELINE_TASK_ID, step.toString());
 
             stepSpans.put(step, stepSpan);
 
@@ -302,10 +312,6 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 return;
             }
             jobSpanMetadata.setCommonSpanAttributes(span);
-
-            span.setAttribute(
-                    TraceUtils.CICD_PIPELINE_TASK_NAME, step.getClass().getSimpleName());
-
             if (canContinue) {
                 span.setAttribute("cicd.pipeline.task.run.result", "success");
                 span.setStatus(StatusCode.OK);

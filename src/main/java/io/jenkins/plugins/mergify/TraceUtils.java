@@ -14,6 +14,7 @@ public class TraceUtils {
     public static final AttributeKey<String> CICD_PIPELINE_ID = AttributeKey.stringKey("cicd.pipeline.id");
     public static final AttributeKey<String> CICD_PIPELINE_NAME = AttributeKey.stringKey("cicd.pipeline.name");
     public static final AttributeKey<String> CICD_PIPELINE_URL = AttributeKey.stringKey("cicd.pipeline.url");
+    // FIXME: remove me we use CICD_PIPELINE_TASK_SCOPE instead
     public static final AttributeKey<String> CICD_PIPELINE_SCOPE = AttributeKey.stringKey("cicd.pipeline.scope");
     public static final AttributeKey<Long> CICD_PIPELINE_RUNNER_ID = AttributeKey.longKey("cicd.pipeline.runner.id");
     public static final AttributeKey<String> CICD_PIPELINE_RUNNER_NAME =
@@ -24,6 +25,9 @@ public class TraceUtils {
     public static final AttributeKey<String> CICD_PIPELINE_TASK_ID = AttributeKey.stringKey("cicd.pipeline.task.id");
     public static final AttributeKey<String> CICD_PIPELINE_TASK_NAME =
             AttributeKey.stringKey("cicd.pipeline.task.name");
+    public static final AttributeKey<String> CICD_PIPELINE_TASK_SCOPE =
+            AttributeKey.stringKey("cicd.pipeline.task.scope");
+
     public static final AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
     public static final AttributeKey<String> VCS_REF_BASE_NAME = AttributeKey.stringKey("vcs.ref.base.name");
     public static final AttributeKey<String> VCS_REF_HEAD_REVISION = AttributeKey.stringKey("vcs.ref.head.revision");
