@@ -37,6 +37,9 @@ public class JobMetadata extends InvisibleAction {
 
         this.pipelineCreatedAt = run.getTimeInMillis();
 
+        // FIXME(sileht): This has two design issues:
+        // * When the job start, the executor is always built-in
+        // * A stage/step can run on different nodes
         Executor executor = run.getExecutor();
         if (executor == null) {
             LOGGER.warning("Run executor is null, cannot set pipeline runner info");
