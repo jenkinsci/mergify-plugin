@@ -4,7 +4,7 @@
         <f:entry>
             <div>
                 <p style="color: #666; font-style: italic;">
-                    You need to set one API Key per GitHub organization that Jenkins we connect to.
+                    You need to set one API Key per GitHub organization that Jenkins will connect to.
                 </p>
             </div>
         </f:entry>
