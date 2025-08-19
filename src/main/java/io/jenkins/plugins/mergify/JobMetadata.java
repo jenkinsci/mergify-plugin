@@ -6,14 +6,15 @@ import hudson.model.labels.LabelAtom;
 import hudson.plugins.git.*;
 import hudson.plugins.git.util.BuildData;
 import io.opentelemetry.api.trace.Span;
+import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.gitclient.GitClient;
 
 public class JobMetadata extends InvisibleAction {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
@@ -36,7 +37,7 @@ public class JobMetadata extends InvisibleAction {
         this.repositoryURLs = new LinkedHashMap<>();
 
         this.pipelineCreatedAt = run.getTimeInMillis();
-
+        
         Executor executor = run.getExecutor();
         if (executor == null) {
             LOGGER.warning("Run executor is null, cannot set pipeline runner info");
@@ -49,7 +50,7 @@ public class JobMetadata extends InvisibleAction {
         Computer computer = executor.getOwner();
         String nodeName = computer.getName();
         this.pipelineRunnerId = executor.getNumber();
-        this.pipelineRunnerName = nodeName.isEmpty() ? "master" : nodeName;
+        this.pipelineRunnerName = nodeName.isEmpty() ? "built-in" : nodeName;
 
         Node node = executor.getOwner().getNode();
         if (node == null) {
