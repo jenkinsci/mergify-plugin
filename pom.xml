@@ -14,7 +14,7 @@
   <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
-  <name>Mergify Jenkins Plugins</name>
+  <name>Mergify</name>
   <url>https://github.com/mergifyio/jenkins-${project.artifactId}-plugin</url>
   <licenses>
     <license>
