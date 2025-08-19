@@ -7,14 +7,15 @@ import hudson.model.labels.LabelAtom;
 import hudson.plugins.git.*;
 import hudson.plugins.git.util.BuildData;
 import io.opentelemetry.api.trace.Span;
+import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.gitclient.GitClient;
 
 public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
@@ -127,7 +128,7 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         for (Map.Entry<String, String> entry : repositoryURLs.entrySet()) {
             String name = entry.getKey();
             String url = entry.getValue();
-            LOGGER.info("Using Repository URL from " + name);
+            LOGGER.fine("Using Repository URL from " + name);
             span.setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, url);
             span.setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, name);
             String repositoryName = getRepositoryName(url);

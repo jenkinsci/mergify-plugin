@@ -14,11 +14,6 @@ import hudson.tasks.BuildStep;
 import hudson.tasks.Builder;
 import io.opentelemetry.api.trace.Span;
 import jakarta.annotation.Nonnull;
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
@@ -30,6 +25,12 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -92,7 +93,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
     // Pipeline and Freestyle Job listener
     public void onStarted(Run<?, ?> run, @NonNull TaskListener listener) {
-        LOGGER.info("build " + run.getFullDisplayName() + " started");
+        LOGGER.fine("build " + run.getFullDisplayName() + " started");
         Span span = TraceUtils.startJobSpan(run);
         if (span != null) {
             buildSpans.put(run, span);
@@ -101,7 +102,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
     // Pipeline and Freestyle Job listener
     public void onCompleted(Run<?, ?> run, @Nonnull TaskListener listener) {
-        LOGGER.info("build " + run.getFullDisplayName() + " completed");
+        LOGGER.fine("build " + run.getFullDisplayName() + " completed");
         Span span = buildSpans.remove(run);
         TraceUtils.endJobSpan(span, run);
     }
@@ -117,7 +118,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             stageSpans.put(node, span);
         }
 
-        LOGGER.info("Stage started: " + stageName);
+        LOGGER.fine("Stage started: " + stageName);
     }
 
     private void endStageSpan(StepEndNode stepEndNode) {
@@ -129,7 +130,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         TraceUtils.endJobStepSpan(span, run, error != null);
 
         String stageName = getStageName(stepStartNode);
-        LOGGER.info("Stage stopped: " + stageName);
+        LOGGER.fine("Stage stopped: " + stageName);
     }
 
     // Freestyle Job step Listener
@@ -146,7 +147,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         @Override
         public void started(AbstractBuild build, BuildStep step, BuildListener listener) {
             if (!isValidBuildStep(step)) {
-                LOGGER.info("Step ignored: " + step);
+                LOGGER.fine("Step ignored: " + step);
                 return;
             }
 
@@ -157,19 +158,19 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 stepSpans.put(step, span);
             }
 
-            LOGGER.info("Step started: " + stepName);
+            LOGGER.fine("Step started: " + stepName);
         }
 
         @Override
         public void finished(AbstractBuild build, BuildStep step, BuildListener listener, boolean canContinue) {
             if (!isValidBuildStep(step)) {
-                LOGGER.info("Step ignored: " + step);
+                LOGGER.fine("Step ignored: " + step);
                 return;
             }
             Span span = stepSpans.get(step);
             TraceUtils.endJobStepSpan(span, build, !canContinue);
             String stepName = getStepName(step);
-            LOGGER.info("Step stopped: " + stepName);
+            LOGGER.fine("Step stopped: " + stepName);
         }
     }
 
@@ -193,24 +194,24 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 File changelogFile,
                 SCMRevisionState pollingBaseline)
                 throws IOException, InterruptedException {
-            LOGGER.info("SCM checkout hooks!");
+            LOGGER.fine("SCM checkout hooks!");
 
             JobMetadata<?> jobSpanMetadata = TraceUtils.getJobMetadata(run);
             if (jobSpanMetadata == null) {
-                LOGGER.warning("Got SCM checkout without job metadata");
+                LOGGER.fine("Got SCM checkout without job metadata");
                 return;
             }
 
             EnvVars envVars = getEnvironment(run, listener);
             if (envVars != null) {
-                LOGGER.info("Got SCM checkout data: " + envVars);
+                LOGGER.fine("Got SCM checkout data: " + envVars);
                 jobSpanMetadata.setSCMCheckoutInfoFromEnvs(envVars);
             }
             if (scm instanceof GitSCM gitSCM) {
                 GitClient client = gitSCM.createClient(listener, envVars, run, workspace);
                 jobSpanMetadata.setSCMCheckoutInfoFromGitSCM(gitSCM, client);
             } else {
-                LOGGER.info("SCM is not GitSCM, skipping checkout info");
+                LOGGER.fine("SCM is not GitSCM, skipping checkout info");
             }
         }
     }

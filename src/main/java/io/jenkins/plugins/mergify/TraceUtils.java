@@ -10,12 +10,13 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
-import java.io.IOException;
-import java.util.List;
-import java.util.logging.Logger;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.logging.Logger;
 
 public class TraceUtils {
     public static final AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
@@ -101,18 +102,18 @@ public class TraceUtils {
 
     public static void endJobStepSpan(Span span, Run<?, ?> run, boolean isError) {
         if (span == null) {
-            LOGGER.warning("Got completed stage/step without span");
+            LOGGER.fine("Got completed stage/step without span");
             return;
         }
         if (run == null) {
-            LOGGER.warning("Got completed stage/step without RunSpanAction");
+            LOGGER.fine("Got completed stage/step without RunSpanAction");
             span.end();
             return;
         }
 
         JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
         if (jobSpanMetadata == null) {
-            LOGGER.warning("Got completed stage/step no job metadata");
+            LOGGER.fine("Got completed stage/step no job metadata");
             span.end();
             return;
         }
@@ -131,7 +132,7 @@ public class TraceUtils {
 
     public static Span startJobStepSpan(Run<?, ?> run, Span parentSpan, String stepName, String stepId) {
         if (parentSpan == null) {
-            LOGGER.warning("Got completed step without parent span");
+            LOGGER.fine("Got completed step without parent span");
             return null;
         }
         Context parentContext = Context.current().with(parentSpan);
@@ -153,7 +154,7 @@ public class TraceUtils {
 
     public static Span startJobSpan(Run<?, ?> run) {
         if (run == null) {
-            LOGGER.warning("Got start RootSpan without Run");
+            LOGGER.fine("Got start RootSpan without Run");
             return null;
         }
         Job<?, ?> job = run.getParent();

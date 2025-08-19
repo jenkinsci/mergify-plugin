@@ -17,10 +17,11 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+import jenkins.model.Jenkins;
+
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import jenkins.model.Jenkins;
 
 @Extension
 public class TracerService {
@@ -67,7 +68,6 @@ public class TracerService {
         VersionNumber jenkinsVersionNumber = Jenkins.getVersion();
         String jenkinsVersion = jenkinsVersionNumber != null ? jenkinsVersionNumber.toString() : "unknown";
 
-        LOGGER.info("Initializing Mergify Tracer (" + version + ")");
         Resource jenkinsResource = Resource.create(Attributes.of(
                 AttributeKey.stringKey("service.name"),
                 SERVICE_NAME,
@@ -105,7 +105,7 @@ public class TracerService {
 
         Runtime.getRuntime().addShutdownHook(new Thread(sdkTracerProvider::close));
         tracer = sdk.getTracer(SERVICE_NAME);
-        LOGGER.info("Mergify Tracer initialized");
+        LOGGER.info("Mergify Tracer initialized (\" + version + \")");
     }
 
     public enum SpanExporterBackend {
