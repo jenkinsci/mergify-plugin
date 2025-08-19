@@ -13,12 +13,8 @@ import hudson.scm.SCMRevisionState;
 import hudson.tasks.BuildStep;
 import hudson.tasks.Builder;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import jakarta.annotation.Nonnull;
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
@@ -30,6 +26,12 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -83,10 +85,22 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
     // Pipeline stage Listener
     @Override
     public void onNewHead(FlowNode node) {
+
         if (isStageStartNode(node)) {
             startStageSpan(node);
         } else if (isStageEndNode(node)) {
             endStageSpan((StepEndNode) node);
+        } else {
+            // Forward traceparent from parent nodes if not already set
+            if (node.getAction(TraceparentAction.class) == null) {
+                for (FlowNode parent : node.getParents()) {
+                    TraceparentAction parentSpan = parent.getAction(TraceparentAction.class);
+                    if (parentSpan != null) {
+                        node.addAction(parentSpan);
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -114,6 +128,8 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
         Span parentSpan = buildSpans.get(run);
         Span span = TraceUtils.startJobStepSpan(run, parentSpan, stageName, stepStartNode.getId());
         if (span != null) {
+            SpanContext spanContext = span.getSpanContext();
+            stepStartNode.addAction(new TraceparentAction(spanContext));
             stageSpans.put(node, span);
         }
 
@@ -155,6 +171,8 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             Span span = TraceUtils.startJobStepSpan(build, parentSpan, stepName, step.toString());
             if (span != null) {
                 stepSpans.put(step, span);
+                SpanContext spanContext = span.getSpanContext();
+                build.addOrReplaceAction(new TraceparentAction(spanContext));
             }
 
             LOGGER.fine("Step started: " + stepName);

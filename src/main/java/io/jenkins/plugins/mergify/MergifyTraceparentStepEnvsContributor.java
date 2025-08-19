@@ -9,17 +9,17 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepEnvironmentContributor;
 
 @Extension
-public class MergifySpanIdEnvsContributor extends StepEnvironmentContributor {
-
-    public void buildEnvironmentFor(StepContext stepContext, EnvVars envs, TaskListener listener) {
-        FlowNode node;
-        try {
-            node = stepContext.get(FlowNode.class);
-        } catch (IOException | InterruptedException e) {
+public class MergifyTraceparentStepEnvsContributor extends StepEnvironmentContributor {
+    @Override
+    public void buildEnvironmentFor(StepContext stepContext, EnvVars envs, TaskListener listener)
+            throws IOException, InterruptedException {
+        super.buildEnvironmentFor(stepContext, envs, listener);
+        FlowNode node = stepContext.get(FlowNode.class);
+        if (node == null) {
             return;
         }
 
-        ParentSpanAction action = node.getAction(ParentSpanAction.class);
+        TraceparentAction action = node.getAction(TraceparentAction.class);
         if (action != null) {
             envs.put("MERGIFY_TRACEPARENT", action.getTraceParent());
         }

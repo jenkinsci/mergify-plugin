@@ -6,8 +6,13 @@ import hudson.model.Result;
 import hudson.model.Run;
 import hudson.plugins.git.GitSCM;
 import hudson.scm.SCM;
+import hudson.tasks.BuildStep;
+import hudson.tasks.Builder;
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.api.trace.*;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -128,6 +133,13 @@ public class TraceUtils {
         span.end();
     }
 
+    private static String getStepName(BuildStep step) {
+        if (step instanceof Builder) {
+            return ((Builder) step).getDescriptor().getDisplayName();
+        }
+        return step.getClass().getSimpleName();
+    }
+
     public static Span startJobStepSpan(Run<?, ?> run, Span parentSpan, String stepName, String stepId) {
         if (parentSpan == null) {
             LOGGER.fine("Got completed step without parent span");
@@ -135,7 +147,7 @@ public class TraceUtils {
         }
         Context parentContext = Context.current().with(parentSpan);
         Tracer tracer = TracerService.getTracer();
-        Span span = tracer.spanBuilder(stepName)
+        return tracer.spanBuilder(stepName)
                 .setParent(Context.current().with(parentSpan))
                 .setSpanKind(SpanKind.INTERNAL)
                 .setAttribute(CICD_PIPELINE_SCOPE, "step")
@@ -144,10 +156,6 @@ public class TraceUtils {
                 .setAttribute(CICD_PIPELINE_TASK_RUN_ID, stepId)
                 .setParent(parentContext)
                 .startSpan();
-
-        SpanContext spanContext = span.getSpanContext();
-        run.addOrReplaceAction(new ParentSpanAction(spanContext));
-        return span;
     }
 
     public static Span startJobSpan(Run<?, ?> run) {
