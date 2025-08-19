@@ -69,6 +69,12 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
         save();
     }
 
+    @Override
+    public void save() {
+        super.save();
+        TracerService.clearMergifySpanExporters();
+    }
+
     public FormValidation doCheckUrl(@QueryParameter String value) throws IOException, ServletException {
         String valueTrim = Util.fixEmptyAndTrim(value);
         if (valueTrim == null) {

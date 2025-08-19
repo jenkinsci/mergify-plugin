@@ -136,6 +136,10 @@ final class MergifySpanExporter implements SpanExporter {
         SpanExporter.super.close();
     }
 
+    public void clearSpanExporters() {
+        spanExporters.clear();
+    }
+
     public String toString() {
         return "MergifySpanExporter{spanExporters=" + this.spanExporters + '}';
     }

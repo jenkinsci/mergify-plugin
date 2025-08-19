@@ -48,6 +48,12 @@ public class TracerService {
         throw new RuntimeException("SpanExporter is not an instance of InMemorySpanExporter");
     }
 
+    public static void clearMergifySpanExporters() {
+        if (spanExporter instanceof MergifySpanExporter) {
+            ((MergifySpanExporter) spanExporter).clearSpanExporters();
+        }
+    }
+
     public static void forceFlush() {
         CompletableResultCode completableResultCode = sdkTracerProvider.forceFlush();
         completableResultCode.join(1, TimeUnit.SECONDS);
