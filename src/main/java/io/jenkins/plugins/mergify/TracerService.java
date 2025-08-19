@@ -17,11 +17,10 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-import jenkins.model.Jenkins;
-
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import jenkins.model.Jenkins;
 
 @Extension
 public class TracerService {

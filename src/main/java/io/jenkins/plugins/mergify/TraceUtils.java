@@ -10,13 +10,11 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.logging.Logger;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.logging.Logger;
 
 public class TraceUtils {
     public static final AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
@@ -66,7 +64,7 @@ public class TraceUtils {
             return;
         }
 
-        JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
+        JobMetadata jobSpanMetadata = getJobMetadata(run);
         if (jobSpanMetadata == null) {
             LOGGER.warning("Got completed stage/step no job metadata");
         } else {
@@ -111,7 +109,7 @@ public class TraceUtils {
             return;
         }
 
-        JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
+        JobMetadata jobSpanMetadata = getJobMetadata(run);
         if (jobSpanMetadata == null) {
             LOGGER.fine("Got completed stage/step no job metadata");
             span.end();
@@ -167,7 +165,7 @@ public class TraceUtils {
                 .setAttribute(CICD_PIPELINE_TASK_RUN_ID, job.getFullDisplayName())
                 .startSpan();
 
-        JobMetadata<?> jobSpanMetadata = getJobMetadata(run);
+        JobMetadata jobSpanMetadata = getJobMetadata(run);
         if (jobSpanMetadata == null) {
             LOGGER.warning("Got start RootSpan  without job metadata");
             return null;
@@ -178,17 +176,12 @@ public class TraceUtils {
     }
 
     public static JobMetadata getJobMetadata(@Nonnull Run<?, ?> run) {
-        Job<?, ?> job = run.getParent();
-        JobMetadata jobMetadata = job.getProperty(JobMetadata.class);
+        JobMetadata jobMetadata = run.getAction(JobMetadata.class);
         if (jobMetadata != null) {
             return jobMetadata;
         }
         JobMetadata newJobMetadata = new JobMetadata(run);
-        try {
-            run.getParent().addProperty(newJobMetadata);
-        } catch (IOException e) {
-            return null;
-        }
+        run.addAction(newJobMetadata);
         return newJobMetadata;
     }
 

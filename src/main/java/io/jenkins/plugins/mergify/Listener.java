@@ -14,6 +14,11 @@ import hudson.tasks.BuildStep;
 import hudson.tasks.Builder;
 import io.opentelemetry.api.trace.Span;
 import jakarta.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
@@ -25,12 +30,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.support.steps.StageStep;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 @Extension
 public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Synchronous {
@@ -196,7 +195,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 throws IOException, InterruptedException {
             LOGGER.fine("SCM checkout hooks!");
 
-            JobMetadata<?> jobSpanMetadata = TraceUtils.getJobMetadata(run);
+            JobMetadata jobSpanMetadata = TraceUtils.getJobMetadata(run);
             if (jobSpanMetadata == null) {
                 LOGGER.fine("Got SCM checkout without job metadata");
                 return;

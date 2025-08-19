@@ -1,9 +1,9 @@
 package io.jenkins.plugins.mergify;
 
+import static org.junit.Assert.assertEquals;
+
 import hudson.util.Secret;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class OrgApiKeyTest {
 

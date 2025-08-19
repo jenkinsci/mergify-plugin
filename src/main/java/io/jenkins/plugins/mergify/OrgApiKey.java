@@ -13,7 +13,6 @@ public class OrgApiKey extends AbstractDescribableImpl<OrgApiKey> {
     private final String organizationName;
     private final Secret apiKey;
 
-
     @DataBoundConstructor
     public OrgApiKey(String organizationName, Secret apiKey) {
         this.organizationName = organizationName;

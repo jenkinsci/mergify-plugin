@@ -1,23 +1,21 @@
 package io.jenkins.plugins.mergify;
 
 import hudson.EnvVars;
-import hudson.Extension;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
 import hudson.plugins.git.*;
 import hudson.plugins.git.util.BuildData;
 import io.opentelemetry.api.trace.Span;
-import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.gitclient.GitClient;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.gitclient.GitClient;
 
-public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
+public class JobMetadata extends InvisibleAction {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
     private final String pipelineName;
     private final String pipelineId;
@@ -192,19 +190,5 @@ public class JobMetadata<T extends Job<?, ?>> extends JobProperty<T> {
         List<BranchSpec> branches = gitSCM.getBranches();
         SCMCheckoutBranch = branches.isEmpty() ? null : branches.get(0).getName();
         SCMCheckoutCommit = client.revParse("HEAD").name();
-    }
-
-    @Extension
-    public static final class RunSpanPropertyDescriptor extends JobPropertyDescriptor {
-
-        @Override
-        public String getDisplayName() {
-            return "Mergify Job Span Attributes";
-        }
-
-        @Override
-        public boolean isApplicable(Class<? extends Job> jobType) {
-            return true;
-        }
     }
 }

@@ -19,8 +19,7 @@ public class TraceUtilsTest {
         Job<?, ?> job = mock(Job.class);
         when(run.getResult()).thenReturn(Result.SUCCESS);
         when(run.getParent()).thenReturn((Job) job);
-        when(job.getProperty((Class<? extends hudson.model.JobProperty>) any(Class.class)))
-                .thenReturn(null);
+        when(run.getAction(JobMetadata.class)).thenReturn(null);
 
         TraceUtils.endJobSpan(span, run);
 
@@ -37,8 +36,7 @@ public class TraceUtilsTest {
         Job<?, ?> job = mock(Job.class);
         when(run.getResult()).thenReturn(Result.NOT_BUILT);
         when(run.getParent()).thenReturn((Job) job);
-        when(job.getProperty((Class<? extends hudson.model.JobProperty>) any(Class.class)))
-                .thenReturn(null);
+        when(run.getAction(JobMetadata.class)).thenReturn(null);
 
         TraceUtils.endJobSpan(span, run);
 
@@ -55,8 +53,7 @@ public class TraceUtilsTest {
         Job<?, ?> job = mock(Job.class);
         when(run.getResult()).thenReturn(Result.FAILURE);
         when(run.getParent()).thenReturn((Job) job);
-        when(job.getProperty((Class<? extends hudson.model.JobProperty>) any(Class.class)))
-                .thenReturn(null);
+        when(run.getAction(JobMetadata.class)).thenReturn(null);
 
         TraceUtils.endJobSpan(span, run);
 
@@ -73,8 +70,7 @@ public class TraceUtilsTest {
         Job<?, ?> job = mock(Job.class);
         when(run.getResult()).thenReturn(Result.ABORTED);
         when(run.getParent()).thenReturn((Job) job);
-        when(job.getProperty((Class<? extends hudson.model.JobProperty>) any(Class.class)))
-                .thenReturn(null);
+        when(run.getAction(JobMetadata.class)).thenReturn(null);
 
         TraceUtils.endJobSpan(span, run);
 
@@ -91,8 +87,7 @@ public class TraceUtilsTest {
         Job<?, ?> job = mock(Job.class);
         when(run.getResult()).thenReturn(Result.UNSTABLE);
         when(run.getParent()).thenReturn((Job) job);
-        when(job.getProperty((Class<? extends hudson.model.JobProperty>) any(Class.class)))
-                .thenReturn(null);
+        when(run.getAction(JobMetadata.class)).thenReturn(null);
 
         TraceUtils.endJobSpan(span, run);
 
@@ -108,8 +103,7 @@ public class TraceUtilsTest {
         Job<?, ?> job = mock(Job.class);
         when(run.getResult()).thenReturn(null);
         when(run.getParent()).thenReturn((Job) job);
-        when(job.getProperty((Class<? extends hudson.model.JobProperty>) any(Class.class)))
-                .thenReturn(null);
+        when(run.getAction(JobMetadata.class)).thenReturn(null);
 
         TraceUtils.endJobSpan(span, run);
 

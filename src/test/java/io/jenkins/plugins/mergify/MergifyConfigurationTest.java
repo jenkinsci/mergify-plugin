@@ -1,19 +1,18 @@
 package io.jenkins.plugins.mergify;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
+
 import hudson.util.FormValidation;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import javax.servlet.ServletException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
-
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
 
 public class MergifyConfigurationTest {
 
