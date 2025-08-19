@@ -6,7 +6,6 @@ import hudson.model.EnvironmentContributor;
 import hudson.model.FreeStyleProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-
 import java.io.IOException;
 
 @Extension

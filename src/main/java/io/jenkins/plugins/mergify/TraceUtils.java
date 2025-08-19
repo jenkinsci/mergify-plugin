@@ -70,12 +70,8 @@ public class TraceUtils {
         }
 
         JobMetadata jobSpanMetadata = getJobMetadata(run);
-        if (jobSpanMetadata == null) {
-            LOGGER.warning("Got completed stage/step no job metadata");
-        } else {
-            jobSpanMetadata.setSCMCheckoutInfoFromBuildData(run);
-            jobSpanMetadata.setCommonSpanAttributes(span);
-        }
+        jobSpanMetadata.setSCMCheckoutInfoFromBuildData(run);
+        jobSpanMetadata.setCommonSpanAttributes(span);
         Result result = run.getResult();
         if (result == null) {
             span.setStatus(StatusCode.UNSET);
@@ -115,12 +111,6 @@ public class TraceUtils {
         }
 
         JobMetadata jobSpanMetadata = getJobMetadata(run);
-        if (jobSpanMetadata == null) {
-            LOGGER.fine("Got completed stage/step no job metadata");
-            span.end();
-            return;
-        }
-
         jobSpanMetadata.setCommonSpanAttributes(span);
 
         if (isError) {
@@ -174,10 +164,6 @@ public class TraceUtils {
                 .startSpan();
 
         JobMetadata jobSpanMetadata = getJobMetadata(run);
-        if (jobSpanMetadata == null) {
-            LOGGER.warning("Got start RootSpan  without job metadata");
-            return null;
-        }
         jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(run));
         jobSpanMetadata.addRepositoryURL("SCMRemoteURL", getSCMRepositoryUrl(run));
         return span;

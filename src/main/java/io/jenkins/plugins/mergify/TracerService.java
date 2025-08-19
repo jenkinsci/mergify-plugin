@@ -31,6 +31,8 @@ public class TracerService {
             value = "MS_SHOULD_BE_FINAL",
             justification = "Intentional non-final static for runtime override/testing")
     public static SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
+
+    @SuppressFBWarnings(value = "MS_PKGPROTECT", justification = "Intentional non protected for testing")
     // Public for testing purposes
     public static SpanExporter spanExporter;
 
@@ -79,8 +81,11 @@ public class TracerService {
                 case MERGIFY:
                     spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
                     break;
+                default:
+                    throw new RuntimeException("Unknown SpanExporter implementation");
             }
         }
+
         BatchSpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter)
                 .setExporterTimeout(Duration.ofSeconds(60))
                 .setMaxExportBatchSize(10000)
