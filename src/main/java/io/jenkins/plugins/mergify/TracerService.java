@@ -16,10 +16,11 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+import jenkins.model.Jenkins;
+
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import jenkins.model.Jenkins;
 
 @Extension
 public class TracerService {
@@ -33,7 +34,6 @@ public class TracerService {
     public static SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
 
     @SuppressFBWarnings(value = "MS_PKGPROTECT", justification = "Intentional non protected for testing")
-    // Public for testing purposes
     public static SpanExporter spanExporter;
 
     private static Tracer tracer;
