@@ -12,6 +12,7 @@ import hudson.scm.SCM;
 import hudson.scm.SCMRevisionState;
 import hudson.tasks.BuildStep;
 import hudson.tasks.Builder;
+import hudson.tasks.Publisher;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import jakarta.annotation.Nonnull;
@@ -75,6 +76,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
     static boolean isValidBuildStep(BuildStep step) {
         return step instanceof Builder // Normal build steps
+                || step instanceof Publisher // Post Action steps
                 || Jenkins.get().getExtensionList(BuildStep.class).contains(step);
     }
 
