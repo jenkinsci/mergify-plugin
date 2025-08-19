@@ -32,8 +32,8 @@
   <properties>
     <revision>1.2.2</revision>
     <changelist />
-    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-    <jenkins.version>2.492.3</jenkins.version>
+    <jenkins.baseline>2.492</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <gitHubRepo>mergifyio/jenkins-${project.artifactId}-plugin</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
@@ -42,7 +42,7 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.492.x</artifactId>
+        <artifactId>bom-${jenkins.baseline}.x</artifactId>
         <version>5252.va_0266944a_b_42</version>
         <type>pom</type>
         <scope>import</scope>
