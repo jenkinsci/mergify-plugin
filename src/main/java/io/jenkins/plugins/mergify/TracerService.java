@@ -13,14 +13,14 @@ import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+import jenkins.model.Jenkins;
+
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import jenkins.model.Jenkins;
 
 @Extension
 public class TracerService {
@@ -32,20 +32,14 @@ public class TracerService {
             value = "MS_SHOULD_BE_FINAL",
             justification = "Intentional non-final static for runtime override/testing")
     public static SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
+    // Public for testing purposes
+    public static SpanExporter spanExporter;
 
     private static Tracer tracer;
-    private static SpanExporter spanExporter;
     private static SdkTracerProvider sdkTracerProvider;
 
     public static Tracer getTracer() {
         return tracer;
-    }
-
-    public static InMemorySpanExporter getInMemorySpanExporter() {
-        if (spanExporter instanceof InMemorySpanExporter) {
-            return (InMemorySpanExporter) spanExporter;
-        }
-        throw new RuntimeException("SpanExporter is not an instance of InMemorySpanExporter");
     }
 
     public static void clearMergifySpanExporters() {
@@ -78,16 +72,15 @@ public class TracerService {
                 "jenkins"));
         Resource resource = Resource.getDefault().merge(jenkinsResource);
 
-        switch (SPAN_EXPORTER_BACKEND) {
-            case MEMORY:
-                spanExporter = InMemorySpanExporter.create();
-                break;
-            case LOG:
-                spanExporter = OtlpJsonLoggingSpanExporter.create();
-                break;
-            case MERGIFY:
-                spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
-                break;
+        if (spanExporter == null) {
+            switch (SPAN_EXPORTER_BACKEND) {
+                case LOG:
+                    spanExporter = OtlpJsonLoggingSpanExporter.create();
+                    break;
+                case MERGIFY:
+                    spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
+                    break;
+            }
         }
         BatchSpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter)
                 .setExporterTimeout(Duration.ofSeconds(60))
@@ -110,6 +103,5 @@ public class TracerService {
     public enum SpanExporterBackend {
         MERGIFY,
         LOG,
-        MEMORY
     }
 }
