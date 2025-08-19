@@ -20,7 +20,7 @@ Continue below for configuration.
 To send job events to Mergify CI Insights you need to add the Mergify CI
 Insights API Key for each GitHub organization you want to support:
 
-/images/settings.png
+![Mergify configuration](/images/settings.png)
 
 
 ## Issues
