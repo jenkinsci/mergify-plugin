@@ -216,11 +216,6 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
             LOGGER.fine("SCM checkout hooks!");
 
             JobMetadata jobSpanMetadata = TraceUtils.getJobMetadata(run);
-            if (jobSpanMetadata == null) {
-                LOGGER.fine("Got SCM checkout without job metadata");
-                return;
-            }
-
             EnvVars envVars = getEnvironment(run, listener);
             if (envVars != null) {
                 LOGGER.fine("Got SCM checkout data: " + envVars);
