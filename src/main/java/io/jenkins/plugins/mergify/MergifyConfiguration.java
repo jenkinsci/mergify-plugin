@@ -3,18 +3,19 @@ package io.jenkins.plugins.mergify;
 import hudson.Extension;
 import hudson.Util;
 import hudson.util.FormValidation;
+import jenkins.model.GlobalConfiguration;
+import jenkins.model.Jenkins;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.verb.POST;
+
+import javax.servlet.ServletException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
-import javax.servlet.ServletException;
-import jenkins.model.GlobalConfiguration;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.export.Exported;
-import org.kohsuke.stapler.verb.POST;
 
 @Extension
 public class MergifyConfiguration extends GlobalConfiguration implements MergifyConfigurationProvider {
@@ -75,17 +76,12 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
         TracerService.clearMergifySpanExporters();
     }
 
-    public FormValidation doCheckUrl(@QueryParameter String value) throws IOException, ServletException {
+    @POST
+    public FormValidation doCheckUrl(@QueryParameter("url") final String value) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.READ);
         String valueTrim = Util.fixEmptyAndTrim(value);
         if (valueTrim == null) {
             return FormValidation.error("Mergify API URL cannot be empty.");
-        }
-        if (!valueTrim.startsWith("https://")) {
-            return FormValidation.error("URL must start with 'https://'.");
-        }
-
-        if (!Pattern.matches("^https://[^/]+$", valueTrim)) {
-            return FormValidation.error("URL must not contain a path. Only domain is allowed.");
         }
 
         try {
@@ -93,6 +89,15 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
         } catch (MalformedURLException e) {
             return FormValidation.error("Invalid URL format.");
         }
+
+        if (!valueTrim.startsWith("https://")) {
+            return FormValidation.error("URL must start with 'https://'.");
+        }
+
+        if (valueTrim.endsWith("/")) {
+            return FormValidation.error("URL must not contain ending /.");
+        }
+
         return FormValidation.ok();
     }
 
@@ -104,6 +109,7 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
     @POST
     public FormValidation doTestConnection(@QueryParameter("url") final String value)
             throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
         try {
             URL url = new URL(value);
             HttpURLConnection connection = openConnection(url);

@@ -1,31 +1,37 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:section title="Mergify CI">
+    <f:section title="Mergify">
         <f:entry>
-            <div>
-                <p style="color: #666; font-style: italic;">
-                    You need to set one API Key per GitHub organization that Jenkins will connect to.
-                </p>
-            </div>
+            <f:description>
+                Configure one Mergify CI Insights token per GitHub organization Jenkins interacts with.
+                <br/>
+                You can add multiple organizations below and their associated Mergify CI Insights tokens.
+            </f:description>
         </f:entry>
-        <f:entry title="Mergify API Url" field="url">
-            <f:textbox/>
-        </f:entry>
-        <f:validateButton
-                title="${%Test Connection}" progress="${%Testing...}"
-                method="testConnection" with="url"/>
-        <f:repeatable field="orgApiKeys" add="Add a GitHub Organization">
+        <f:repeatable field="orgApiKeys" add="Add organization" header="GitHub Organization">
             <f:block>
-                <div align="right">
+                <div style="display:flex; justify-content:flex-end;">
                     <f:repeatableDeleteButton/>
                 </div>
             </f:block>
-            <f:entry title="GitHub Organization Name" field="organizationName">
-                <f:textbox/>
+            <f:entry title="Name" field="organizationName">
+                <f:textbox checkMethod="post"/>
             </f:entry>
-            <f:entry title="Mergify CI API Key" field="apiKey">
+            <f:entry title="Mergify CI Insights token" field="apiKey">
                 <f:password/>
             </f:entry>
         </f:repeatable>
+
+        <f:entry>
+
+        </f:entry>
+        <f:advanced>
+            <f:entry title="Mergify API server URL" field="url">
+                <f:textbox checkMethod="post"/>
+            </f:entry>
+            <f:validateButton
+                    title="${%Test Connection}" progress="${%Testing...}"
+                    method="testConnection" with="url"/>
+        </f:advanced>
     </f:section>
 </j:jelly>

@@ -1,9 +1,9 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-
 import hudson.util.Secret;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class OrgApiKeyTest {
 
@@ -30,6 +30,6 @@ public class OrgApiKeyTest {
     @Test
     public void testDescriptorDisplayName() {
         OrgApiKey.DescriptorImpl descriptor = new OrgApiKey.DescriptorImpl();
-        assertEquals("Organization API Key", descriptor.getDisplayName());
+        assertEquals("GitHub Organization's Mergify CI Insights token", descriptor.getDisplayName());
     }
 }

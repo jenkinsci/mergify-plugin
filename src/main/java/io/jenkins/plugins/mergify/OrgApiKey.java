@@ -3,12 +3,16 @@ package io.jenkins.plugins.mergify;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.util.FormValidation;
 import hudson.util.Secret;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 public class OrgApiKey extends AbstractDescribableImpl<OrgApiKey> {
     private final String organizationName;
     private final Secret apiKey;
+
 
     @DataBoundConstructor
     public OrgApiKey(String organizationName, Secret apiKey) {
@@ -37,7 +41,26 @@ public class OrgApiKey extends AbstractDescribableImpl<OrgApiKey> {
     public static class DescriptorImpl extends Descriptor<OrgApiKey> {
         @Override
         public String getDisplayName() {
-            return "Organization API Key";
+            return "GitHub Organization's Mergify CI Insights token";
+        }
+
+        @POST
+        public FormValidation doCheckOrganizationName(@QueryParameter String value) {
+            if (value == null || value.isBlank()) {
+                return FormValidation.error("Organization name is required.");
+            }
+            if (!value.matches("[a-zA-Z0-9-]+")) {
+                return FormValidation.error("Organization name usually contains only letters, numbers, and dashes.");
+            }
+            return FormValidation.ok();
+        }
+
+        @POST
+        public FormValidation doCheckApiKey(@QueryParameter Secret value) {
+            if (value == null || value.getPlainText().isBlank()) {
+                return FormValidation.error("API key is required.");
+            }
+            return FormValidation.ok();
         }
     }
 }

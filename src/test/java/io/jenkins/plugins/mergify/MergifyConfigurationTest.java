@@ -1,17 +1,19 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import hudson.util.FormValidation;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import javax.servlet.ServletException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
+
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 
 public class MergifyConfigurationTest {
 
@@ -52,9 +54,9 @@ public class MergifyConfigurationTest {
     @Test
     public void testDoCheckUrl_UrlWithPath() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
-        FormValidation result = config.doCheckUrl("https://api.mergify.com/v1");
+        FormValidation result = config.doCheckUrl("https://api.mergify.com/");
         assertEquals(FormValidation.Kind.ERROR, result.kind);
-        assertEquals("URL must not contain a path. Only domain is allowed.", result.getMessage());
+        assertEquals("URL must not contain ending /.", result.getMessage());
     }
 
     /*
@@ -70,15 +72,15 @@ public class MergifyConfigurationTest {
 
     @Test
     public void testDoTestConnection_Success() throws IOException, ServletException {
-        MergifyConfiguration config = Mockito.spy(new MergifyConfiguration());
+        MergifyConfiguration config = spy(new MergifyConfiguration());
 
         // Mock URL connection
-        HttpURLConnection mockConnection = Mockito.mock(HttpURLConnection.class);
-        Mockito.when(mockConnection.getResponseCode()).thenReturn(200);
-        Mockito.when(mockConnection.getResponseMessage()).thenReturn("OK");
+        HttpURLConnection mockConnection = mock(HttpURLConnection.class);
+        when(mockConnection.getResponseCode()).thenReturn(200);
+        when(mockConnection.getResponseMessage()).thenReturn("OK");
 
         // Mock URL.openConnection() to return mock HttpURLConnection
-        Mockito.doReturn(mockConnection).when(config).openConnection(Mockito.any(URL.class));
+        doReturn(mockConnection).when(config).openConnection(Mockito.any(URL.class));
 
         FormValidation result = config.doTestConnection("https://api.mergify.com");
 
@@ -88,13 +90,13 @@ public class MergifyConfigurationTest {
 
     @Test
     public void testDoTestConnection_HttpError() throws IOException, ServletException {
-        MergifyConfiguration config = Mockito.spy(new MergifyConfiguration());
+        MergifyConfiguration config = spy(new MergifyConfiguration());
 
-        HttpURLConnection mockConnection = Mockito.mock(HttpURLConnection.class);
-        Mockito.when(mockConnection.getResponseCode()).thenReturn(500);
-        Mockito.when(mockConnection.getResponseMessage()).thenReturn("Internal Server Error");
+        HttpURLConnection mockConnection = mock(HttpURLConnection.class);
+        when(mockConnection.getResponseCode()).thenReturn(500);
+        when(mockConnection.getResponseMessage()).thenReturn("Internal Server Error");
 
-        Mockito.doReturn(mockConnection).when(config).openConnection(Mockito.any(URL.class));
+        doReturn(mockConnection).when(config).openConnection(any(URL.class));
 
         FormValidation result = config.doTestConnection("https://api.mergify.com");
 
