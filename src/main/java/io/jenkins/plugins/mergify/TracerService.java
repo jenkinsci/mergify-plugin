@@ -1,6 +1,5 @@
 package io.jenkins.plugins.mergify;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.PluginWrapper;
 import hudson.init.InitMilestone;
@@ -16,11 +15,10 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-import jenkins.model.Jenkins;
-
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import jenkins.model.Jenkins;
 
 @Extension
 public class TracerService {
@@ -28,19 +26,18 @@ public class TracerService {
     private static final Logger LOGGER = Logger.getLogger(TracerService.class.getName());
     private static final String SERVICE_NAME = "MergifyJenkinsPlugin";
 
-    @SuppressFBWarnings(
-            value = "MS_SHOULD_BE_FINAL",
-            justification = "Intentional non-final static for runtime override/testing")
-    public static SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
-
-    @SuppressFBWarnings(value = "MS_PKGPROTECT", justification = "Intentional non protected for testing")
-    public static SpanExporter spanExporter;
+    private static final SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
+    private static SpanExporter spanExporter;
 
     private static Tracer tracer;
     private static SdkTracerProvider sdkTracerProvider;
 
     public static Tracer getTracer() {
         return tracer;
+    }
+
+    public static void setSpanExporter(SpanExporter newSpanExporter) {
+        spanExporter = newSpanExporter;
     }
 
     public static void clearMergifySpanExporters() {
