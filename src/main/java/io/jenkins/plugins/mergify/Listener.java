@@ -15,7 +15,6 @@ import hudson.tasks.Builder;
 import hudson.tasks.Publisher;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
-import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -115,7 +114,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
     }
 
     // Pipeline and Freestyle Job listener
-    public void onCompleted(Run<?, ?> run, @Nonnull TaskListener listener) {
+    public void onFinalized(Run<?, ?> run) {
         LOGGER.fine("build " + run.getFullDisplayName() + " completed");
         Span span = buildSpans.remove(run);
         TraceUtils.endJobSpan(span, run);

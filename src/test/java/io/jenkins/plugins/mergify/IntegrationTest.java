@@ -9,6 +9,7 @@ import hudson.model.FreeStyleProject;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
+import hudson.tasks.Fingerprinter;
 import hudson.tasks.Shell;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
@@ -103,11 +104,13 @@ public class IntegrationTest {
         String githubProjectUrl = "https://github.com/mergifyio/plugin";
         project.addProperty(new GithubProjectProperty(githubProjectUrl));
         project.getBuildersList().add(new Shell("echo 'Hello World...'"));
+        project.getBuildersList().add(new Shell("touch foobar"));
+        project.getPublishersList().add(new Fingerprinter("foobar"));
 
         jenkinsRule.buildAndAssertSuccess(project);
 
         List<SpanData> spans = getSpans();
-        assertEquals(2, spans.size());
+        assertEquals(4, spans.size());
 
         String expectedTraceId = spans.get(0).getTraceId();
         spans.forEach(span -> assertEquals(expectedTraceId, span.getTraceId()));
@@ -131,6 +134,8 @@ public class IntegrationTest {
 
         // Step Attributes
         assertEquals("Execute shell", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        assertEquals("Execute shell", spans.get(1).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+        assertEquals("Fingerprinter", spans.get(2).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
     }
 
     @Test
