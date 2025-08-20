@@ -5,7 +5,6 @@ import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
-import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.verb.POST;
@@ -44,9 +43,9 @@ public class OrgApiKey extends AbstractDescribableImpl<OrgApiKey> {
             return "GitHub Organization's Mergify CI Insights token";
         }
 
+        @SuppressWarnings("lgtm[jenkins/no-permission-check]")
         @POST
         public FormValidation doCheckOrganizationName(@QueryParameter String value) {
-            Jenkins.get().checkPermission(Jenkins.READ);
             if (value == null || value.isBlank()) {
                 return FormValidation.error("Organization name is required.");
             }
@@ -56,9 +55,9 @@ public class OrgApiKey extends AbstractDescribableImpl<OrgApiKey> {
             return FormValidation.ok();
         }
 
+        @SuppressWarnings("lgtm[jenkins/no-permission-check]")
         @POST
         public FormValidation doCheckApiKey(@QueryParameter Secret value) {
-            Jenkins.get().checkPermission(Jenkins.READ);
             if (value == null || value.getPlainText().isBlank()) {
                 return FormValidation.error("API key is required.");
             }

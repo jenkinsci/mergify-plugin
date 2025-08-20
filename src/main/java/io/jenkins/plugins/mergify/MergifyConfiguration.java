@@ -3,18 +3,19 @@ package io.jenkins.plugins.mergify;
 import hudson.Extension;
 import hudson.Util;
 import hudson.util.FormValidation;
+import jenkins.model.GlobalConfiguration;
+import jenkins.model.Jenkins;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.verb.POST;
+
+import javax.servlet.ServletException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import javax.servlet.ServletException;
-import jenkins.model.GlobalConfiguration;
-import jenkins.model.Jenkins;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.export.Exported;
-import org.kohsuke.stapler.verb.POST;
 
 @Extension
 public class MergifyConfiguration extends GlobalConfiguration implements MergifyConfigurationProvider {
@@ -75,9 +76,9 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
         TracerService.clearMergifySpanExporters();
     }
 
+    @SuppressWarnings("lgtm[jenkins/no-permission-check]")
     @POST
     public FormValidation doCheckUrl(@QueryParameter("url") final String value) throws IOException, ServletException {
-        Jenkins.get().checkPermission(Jenkins.READ);
         String valueTrim = Util.fixEmptyAndTrim(value);
         if (valueTrim == null) {
             return FormValidation.error("Mergify API URL cannot be empty.");
