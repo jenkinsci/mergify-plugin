@@ -1,5 +1,6 @@
 package io.jenkins.plugins.mergify;
 
+import hudson.BulkChange;
 import hudson.Extension;
 import hudson.Util;
 import hudson.util.FormValidation;
@@ -12,7 +13,9 @@ import java.util.List;
 import javax.servlet.ServletException;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.verb.POST;
 
@@ -70,7 +73,16 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
     }
 
     @Override
+    public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
+        orgApiKeys = null; // form binding might omit empty lists
+        req.bindJSON(this, json);
+        return true;
+    }
+
+    @Override
     public void save() {
+        if (BulkChange.contains(this)) return;
+
         super.save();
         TracerService.clearMergifySpanExporters();
     }
