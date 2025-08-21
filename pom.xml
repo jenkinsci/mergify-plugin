@@ -11,7 +11,7 @@
 
   <groupId>io.jenkins.plugins</groupId>
   <artifactId>mergify</artifactId>
-  <version>${changelist}</version>
+  <version>${revision}.${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>Mergify</name>
@@ -29,7 +29,8 @@
     <url>https://github.com/${gitHubRepo}</url>
   </scm>
 
-  <properties>
+    <properties>
+    <revision>1</revision>
     <changelist>999999-SNAPSHOT</changelist>
     <jenkins.baseline>2.492</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
