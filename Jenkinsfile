@@ -7,5 +7,8 @@ buildPlugin(
   useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
   configurations: [
     [platform: 'linux', jdk: 21],
-    [platform: 'windows', jdk: 17],
+
+    // Node seems never available, we don't have windows related stuffs, so just test with jdk 17 for now
+    //[platform: 'windows', jdk: 17],
+    [platform: 'linux', jdk: 17],
 ])
