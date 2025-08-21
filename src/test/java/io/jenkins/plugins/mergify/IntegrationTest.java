@@ -64,7 +64,12 @@ public class IntegrationTest {
     }
 
     private String runCommand(File dir, String command) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
+        ProcessBuilder pb;
+        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+            pb = new ProcessBuilder("cmd", "/c", command);
+        } else {
+            pb = new ProcessBuilder("bash", "-c", command);
+        }
         pb.directory(dir);
         pb.redirectErrorStream(true);
         Process process = pb.start();
@@ -78,7 +83,7 @@ public class IntegrationTest {
         runCommand(repoDir, "git init");
         runCommand(repoDir, "git config user.name 'Test User'");
         runCommand(repoDir, "git config user.email 'test@example.com'");
-        runCommand(repoDir, "touch README.md");
+        new File(repoDir, "README.md").createNewFile();
         runCommand(repoDir, "git add README.md");
         runCommand(repoDir, "git commit -m 'Initial commit'");
         runCommand(repoDir, "git branch -m main");
