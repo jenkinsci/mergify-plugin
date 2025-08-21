@@ -29,7 +29,7 @@
     <url>https://github.com/${gitHubRepo}</url>
   </scm>
 
-    <properties>
+  <properties>
     <revision>1</revision>
     <changelist>999999-SNAPSHOT</changelist>
     <jenkins.baseline>2.492</jenkins.baseline>
