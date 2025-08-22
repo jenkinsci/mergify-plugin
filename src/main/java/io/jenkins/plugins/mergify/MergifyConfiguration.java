@@ -72,6 +72,14 @@ public class MergifyConfiguration extends GlobalConfiguration implements Mergify
         save();
     }
 
+    @Exported
+    public String getDashboardUrl() {
+        if (url != null && url.equals("https://api.mergify.com")) {
+            return "https://dashboard.mergify.com";
+        }
+        return url;
+    }
+
     @Override
     public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
         orgApiKeys = null; // form binding might omit empty lists

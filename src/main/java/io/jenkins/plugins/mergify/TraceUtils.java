@@ -166,6 +166,7 @@ public class TraceUtils {
         JobMetadata jobSpanMetadata = getJobMetadata(run);
         jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(run));
         jobSpanMetadata.addRepositoryURL("SCMRemoteURL", getSCMRepositoryUrl(run));
+        jobSpanMetadata.setSpanContext(span.getSpanContext());
         return span;
     }
 

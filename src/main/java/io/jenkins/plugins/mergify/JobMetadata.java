@@ -6,6 +6,7 @@ import hudson.model.labels.LabelAtom;
 import hudson.plugins.git.*;
 import hudson.plugins.git.util.BuildData;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -15,7 +16,7 @@ import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 
-public class JobMetadata extends InvisibleAction {
+public class JobMetadata implements Action {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
     private final String pipelineName;
     private final String pipelineId;
@@ -27,6 +28,8 @@ public class JobMetadata extends InvisibleAction {
     private volatile String SCMCheckoutBranch;
     private volatile String SCMCheckoutCommit;
     private Map<String, String> repositoryURLs;
+    private volatile String jobTraceId;
+    private volatile String jobSpanId;
 
     public JobMetadata(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
@@ -80,6 +83,47 @@ public class JobMetadata extends InvisibleAction {
         }
 
         return null; // No valid match found
+    }
+
+    public void setSpanContext(SpanContext spanContext) {
+        this.jobTraceId = spanContext.getTraceId();
+        this.jobSpanId = spanContext.getSpanId();
+    }
+
+    @Override
+    public String getIconFileName() {
+        return "/plugin/mergify/images/logo.png";
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Mergify CI Insights";
+    }
+
+    @Override
+    public String getUrlName() {
+        String login = null;
+        String repository = null;
+        for (Map.Entry<String, String> entry : repositoryURLs.entrySet()) {
+            String url = entry.getValue();
+            String repositoryName = getRepositoryName(url);
+            if (repositoryName != null) {
+                String[] parts = repositoryName.split("/", 2);
+                login = parts[0];
+                repository = parts[1];
+            }
+            break;
+        }
+        String url = MergifyConfiguration.get().getDashboardUrl();
+        String path;
+        try {
+            path = DashboardUrlBuilder.buildUrl(
+                    login, repository, this.pipelineName, this.pipelineName, this.jobTraceId, this.jobSpanId);
+        } catch (Exception e) {
+            LOGGER.warning("Failed to build dashboard URL: " + e.getMessage());
+            path = "/ci-insights/jobs";
+        }
+        return url + path;
     }
 
     // Ensure safe deserialization
