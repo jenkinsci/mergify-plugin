@@ -15,6 +15,8 @@ Install the plugin by using one of the two install buttons at the bottom of the 
 To verify the plugin is installed, search for Mergify Plugin on the Installed tab.
 Continue below for configuration.
 
+![Mergify installation](/images/installation.png)
+
 ### Configuration
 
 To send job events to Mergify CI Insights you need to add the Mergify CI
