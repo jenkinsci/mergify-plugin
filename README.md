@@ -10,7 +10,7 @@ Jenkins plugin to send job events to Mergify CI Insights
 
 This plugin can be installed from the Update Center (found at Manage Jenkins -> Manage Plugins) in your Jenkins installation:
 
-Select the Available tab, search for Mergify, and select the checkbox next to Datadog Plugin.
+Select the Available tab, search for Mergify, and select the checkbox next to Mergify Plugin.
 Install the plugin by using one of the two install buttons at the bottom of the screen.
 To verify the plugin is installed, search for Mergify Plugin on the Installed tab.
 Continue below for configuration.
