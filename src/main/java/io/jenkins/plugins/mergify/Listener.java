@@ -185,9 +185,16 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 return;
             }
             Span span = stepSpans.get(step);
-            TraceUtils.endJobStepSpan(span, build, !canContinue);
+
+            // Check if step failed by looking at build result
+            // canContinue=false means step failed and build cannot continue
+            Result buildResult = build.getResult();
+            boolean buildFailed = buildResult != null && buildResult.isWorseThan(Result.SUCCESS);
+            boolean stepFailed = !canContinue || buildFailed;
+
+            TraceUtils.endJobStepSpan(span, build, stepFailed);
             String stepName = getStepName(step);
-            LOGGER.fine("Step stopped: " + stepName);
+            LOGGER.fine("Step stopped: " + stepName + " (failed: " + stepFailed + ")");
         }
     }
 
