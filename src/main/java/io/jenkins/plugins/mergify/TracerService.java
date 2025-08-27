@@ -79,6 +79,6 @@ public class TracerService {
 
         Runtime.getRuntime().addShutdownHook(new Thread(sdkTracerProvider::close));
         tracer = sdk.getTracer(SERVICE_NAME);
-        LOGGER.info("Mergify Tracer initialized (\" + version + \")");
+        LOGGER.info("Mergify Tracer initialized (" + version + ")");
     }
 }
