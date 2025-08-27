@@ -39,7 +39,7 @@ public class IntegrationTest {
     public static JenkinsConfiguredWithCodeRule jenkinsRule = new JenkinsConfiguredWithCodeRule();
 
     static {
-        TracerService.setSpanExporter(spanExporter);
+        MergifySpanExporter.setTestExporter(spanExporter);
     }
 
     @BeforeClass

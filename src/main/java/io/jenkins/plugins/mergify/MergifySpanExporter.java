@@ -1,5 +1,6 @@
 package io.jenkins.plugins.mergify;
 
+import io.opentelemetry.exporter.logging.LoggingSpanExporter;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
@@ -15,12 +16,17 @@ import java.util.stream.Collectors;
 
 final class MergifySpanExporter implements SpanExporter {
     private static final Logger LOGGER = Logger.getLogger(MergifySpanExporter.class.getName());
+    private static SpanExporter testExporter = null;
     private final Map<String, OtlpHttpSpanExporter> spanExporters = new ConcurrentHashMap<>();
-
+    private final LoggingSpanExporter logExporter = LoggingSpanExporter.create();
     private final MergifyConfigurationProvider config;
 
     public MergifySpanExporter(MergifyConfigurationProvider config) {
         this.config = config;
+    }
+
+    public static void setTestExporter(SpanExporter newTestExporter) {
+        testExporter = newTestExporter;
     }
 
     private static Map<String, List<SpanData>> groupByRepositoryName(Collection<SpanData> collection) {
@@ -38,7 +44,11 @@ final class MergifySpanExporter implements SpanExporter {
                 .build();
     }
 
-    private OtlpHttpSpanExporter getSpanExporter(String repositoryName) {
+    private SpanExporter getSpanExporter(String repositoryName) {
+        if (testExporter != null) {
+            return testExporter;
+        }
+
         OtlpHttpSpanExporter exporter = spanExporters.get(repositoryName);
         if (exporter != null) {
             return exporter;
@@ -60,6 +70,14 @@ final class MergifySpanExporter implements SpanExporter {
         return newExporter;
     }
 
+    boolean shouldLogSpan() {
+        Level level = LOGGER.getLevel();
+        if (level == null) {
+            level = Logger.getLogger("").getLevel(); // fallback to root
+        }
+        return level.intValue() >= Level.FINE.intValue();
+    }
+
     @Override
     public CompletableResultCode export(Collection<SpanData> collection) {
 
@@ -72,9 +90,12 @@ final class MergifySpanExporter implements SpanExporter {
         groupedByRepositoryName.forEach((repositoryName, spans) -> {
             LOGGER.info("Exporting " + spans.size() + " spans to repository `" + repositoryName + "`");
 
+            if (shouldLogSpan()) {
+                results.add(logExporter.export(spans));
+            }
+
             CompletableResultCode exportResult;
             SpanExporter exporter = getSpanExporter(repositoryName);
-
             if (exporter == null) {
                 results.add(CompletableResultCode.ofSuccess());
                 return;

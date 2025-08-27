@@ -8,7 +8,6 @@ import hudson.util.VersionNumber;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.resources.Resource;
@@ -24,9 +23,9 @@ import jenkins.model.Jenkins;
 public class TracerService {
 
     private static final Logger LOGGER = Logger.getLogger(TracerService.class.getName());
+
     private static final String SERVICE_NAME = "MergifyJenkinsPlugin";
 
-    private static final SpanExporterBackend SPAN_EXPORTER_BACKEND = SpanExporterBackend.MERGIFY;
     private static SpanExporter spanExporter;
 
     private static Tracer tracer;
@@ -34,10 +33,6 @@ public class TracerService {
 
     public static Tracer getTracer() {
         return tracer;
-    }
-
-    public static void setSpanExporter(SpanExporter newSpanExporter) {
-        spanExporter = newSpanExporter;
     }
 
     public static void clearMergifySpanExporters() {
@@ -70,18 +65,7 @@ public class TracerService {
                 "jenkins"));
         Resource resource = Resource.getDefault().merge(jenkinsResource);
 
-        if (spanExporter == null) {
-            switch (SPAN_EXPORTER_BACKEND) {
-                case LOG:
-                    spanExporter = OtlpJsonLoggingSpanExporter.create();
-                    break;
-                case MERGIFY:
-                    spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
-                    break;
-                default:
-                    throw new RuntimeException("Unknown SpanExporter implementation");
-            }
-        }
+        spanExporter = new MergifySpanExporter(MergifyConfiguration.get());
 
         BatchSpanProcessor spanProcessor = BatchSpanProcessor.builder(spanExporter)
                 .setExporterTimeout(Duration.ofSeconds(60))
@@ -99,10 +83,5 @@ public class TracerService {
         Runtime.getRuntime().addShutdownHook(new Thread(sdkTracerProvider::close));
         tracer = sdk.getTracer(SERVICE_NAME);
         LOGGER.info("Mergify Tracer initialized (\" + version + \")");
-    }
-
-    public enum SpanExporterBackend {
-        MERGIFY,
-        LOG,
     }
 }

@@ -29,6 +29,7 @@ public class MergifySpanExporterTest {
         when(mockConfig.getApiKeyForOrg("org")).thenReturn("secret");
 
         exporter = spy(new MergifySpanExporter(mockConfig));
+        doReturn(false).when(exporter).shouldLogSpan();
         exporterCaptor = ArgumentCaptor.forClass(Collection.class);
 
         mockOtlpExporter = mock(OtlpHttpSpanExporter.class);
