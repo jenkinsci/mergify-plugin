@@ -13,7 +13,6 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -26,7 +25,7 @@ public class TracerService {
 
     private static final String SERVICE_NAME = "MergifyJenkinsPlugin";
 
-    private static SpanExporter spanExporter;
+    private static MergifySpanExporter spanExporter;
 
     private static Tracer tracer;
     private static SdkTracerProvider sdkTracerProvider;
@@ -36,9 +35,7 @@ public class TracerService {
     }
 
     public static void clearMergifySpanExporters() {
-        if (spanExporter instanceof MergifySpanExporter) {
-            ((MergifySpanExporter) spanExporter).clearSpanExporters();
-        }
+        spanExporter.clearSpanExporters();
     }
 
     public static void forceFlush() {
