@@ -1,7 +1,7 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 import hudson.util.FormValidation;
@@ -9,25 +9,33 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import javax.servlet.ServletException;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.Mockito;
 
-public class MergifyConfigurationTest {
+@WithJenkins
+class MergifyConfigurationTest {
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+    @SuppressWarnings("unused")
+    private JenkinsRule jenkinsRule;
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        jenkinsRule = rule;
+    }
 
     @Test
-    public void testDoCheckUrl_ValidUrl() throws IOException, ServletException {
+    void testDoCheckUrl_ValidUrl() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doCheckUrl("https://api.mergify.com");
         assertEquals(FormValidation.Kind.OK, result.kind);
     }
 
     @Test
-    public void testDoCheckUrl_EmptyUrl() throws IOException, ServletException {
+    void testDoCheckUrl_EmptyUrl() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doCheckUrl("");
         assertEquals(FormValidation.Kind.ERROR, result.kind);
@@ -35,7 +43,7 @@ public class MergifyConfigurationTest {
     }
 
     @Test
-    public void testDoCheckUrl_NullUrl() throws IOException, ServletException {
+    void testDoCheckUrl_NullUrl() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doCheckUrl(null);
         assertEquals(FormValidation.Kind.ERROR, result.kind);
@@ -43,7 +51,7 @@ public class MergifyConfigurationTest {
     }
 
     @Test
-    public void testDoCheckUrl_MissingHttps() throws IOException, ServletException {
+    void testDoCheckUrl_MissingHttps() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doCheckUrl("http://api.mergify.com");
         assertEquals(FormValidation.Kind.ERROR, result.kind);
@@ -51,26 +59,24 @@ public class MergifyConfigurationTest {
     }
 
     @Test
-    public void testDoCheckUrl_UrlWithPath() throws IOException, ServletException {
+    void testDoCheckUrl_UrlWithPath() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doCheckUrl("https://api.mergify.com/");
         assertEquals(FormValidation.Kind.ERROR, result.kind);
         assertEquals("URL must not contain ending /.", result.getMessage());
     }
 
-    /*
-    FIXME(sileht): new URL() does not raise the expected MalformedURLException in test
-
     @Test
-    public void testDoCheckUrl_InvalidUrlFormat() throws IOException, ServletException {
+    @Disabled("FIXME(sileht): new URL() does not raise the expected MalformedURLException in test")
+    void testDoCheckUrl_InvalidUrlFormat() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doCheckUrl("https://api..co");
         assertEquals(FormValidation.Kind.ERROR, result.kind);
         assertEquals("Invalid URL format.", result.getMessage());
-    }*/
+    }
 
     @Test
-    public void testDoTestConnection_Success() throws IOException, ServletException {
+    void testDoTestConnection_Success() throws IOException, ServletException {
         MergifyConfiguration config = spy(new MergifyConfiguration());
 
         // Mock URL connection
@@ -88,7 +94,7 @@ public class MergifyConfigurationTest {
     }
 
     @Test
-    public void testDoTestConnection_HttpError() throws IOException, ServletException {
+    void testDoTestConnection_HttpError() throws IOException, ServletException {
         MergifyConfiguration config = spy(new MergifyConfiguration());
 
         HttpURLConnection mockConnection = mock(HttpURLConnection.class);
@@ -104,7 +110,7 @@ public class MergifyConfigurationTest {
     }
 
     @Test
-    public void testDoTestConnection_ClientError() throws IOException, ServletException {
+    void testDoTestConnection_ClientError() throws IOException, ServletException {
         MergifyConfiguration config = new MergifyConfiguration();
         FormValidation result = config.doTestConnection("invalid_url");
 

@@ -1,7 +1,7 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
@@ -11,8 +11,7 @@ import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.tasks.Fingerprinter;
 import hudson.tasks.Shell;
-import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
-import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import io.jenkins.plugins.casc.ConfigurationAsCode;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
@@ -25,40 +24,44 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class IntegrationTest {
+@WithJenkins
+class IntegrationTest {
+
     private static final Logger LOGGER = Logger.getLogger(IntegrationTest.class.getName());
     private static final InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
 
-    @ClassRule
-    @ConfiguredWithCode("test.yml")
-    public static JenkinsConfiguredWithCodeRule jenkinsRule = new JenkinsConfiguredWithCodeRule();
+    private static JenkinsRule jenkinsRule;
 
-    static {
-        MergifySpanExporter.setTestExporter(spanExporter);
-    }
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
+    @BeforeAll
+    static void beforeAll(JenkinsRule rule) throws Exception {
         LOGGER.info("Jenkins is starting...");
-        jenkinsRule.waitUntilNoActivity();
+
+        ConfigurationAsCode.get()
+                .configure(IntegrationTest.class.getResource("test.yml").toString());
+        rule.waitUntilNoActivity();
+        jenkinsRule = rule;
+
         LOGGER.info("Jenkins started");
+
+        MergifySpanExporter.setTestExporter(spanExporter);
 
         ExtensionList<TracerService> tracerServiceExt =
                 jenkinsRule.getInstance().getExtensionList(TracerService.class);
-        assert tracerServiceExt.size() == 1;
+        assertEquals(1, tracerServiceExt.size());
     }
 
-    @Before
-    public void before() {
+    @BeforeEach
+    void beforeEach() {
         spanExporter.reset();
     }
 
-    List<SpanData> getSpans() {
+    private List<SpanData> getSpans() {
         TracerService.forceFlush();
         return spanExporter.getFinishedSpanItems();
     }
@@ -76,14 +79,14 @@ public class IntegrationTest {
         return new String(process.getInputStream().readAllBytes()).trim();
     }
 
-    public File createGitRepository(String jobName) throws Exception {
+    private File createGitRepository(String jobName) throws Exception {
         File repoDir = Files.createTempDirectory(jobName).toFile();
 
         // Initialize a real Git repository using system commands
         runCommand(repoDir, "git init");
         runCommand(repoDir, "git config user.name 'Test User'");
         runCommand(repoDir, "git config user.email 'test@example.com'");
-        new File(repoDir, "README.md").createNewFile();
+        assertTrue(new File(repoDir, "README.md").createNewFile());
         runCommand(repoDir, "git add README.md");
         runCommand(repoDir, "git commit -m 'Initial commit'");
         runCommand(repoDir, "git branch -m main");
@@ -91,7 +94,7 @@ public class IntegrationTest {
     }
 
     @Test
-    public void testFreestyleJob() throws Exception {
+    void testFreestyleJob() throws Exception {
         final String jobName = "test-freestyle";
         FreeStyleProject project = jenkinsRule.createFreeStyleProject(jobName);
 
@@ -144,7 +147,7 @@ public class IntegrationTest {
     }
 
     @Test
-    public void testPipelineJob() throws Exception {
+    void testPipelineJob() throws Exception {
         final String jobName = "test-pipeline";
         WorkflowJob job = jenkinsRule.createProject(WorkflowJob.class, jobName);
 
@@ -154,20 +157,22 @@ public class IntegrationTest {
 
         // Define the pipeline script
         String pipelineScript = String.format(
-                "pipeline {\n" + "    agent any\n"
-                        + "    stages {\n"
-                        + "        stage('Checkout') {\n"
-                        + "            steps {\n"
-                        + "                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])\n"
-                        + "            }\n"
-                        + "        }\n"
-                        + "        stage('Build') {\n"
-                        + "            steps {\n"
-                        + "                sh 'echo Hello World...'\n"
-                        + "            }\n"
-                        + "        }\n"
-                        + "    }\n"
-                        + "}",
+                """
+                        pipeline {
+                            agent any
+                            stages {
+                                stage('Checkout') {
+                                    steps {
+                                        checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])
+                                    }
+                                }
+                                stage('Build') {
+                                    steps {
+                                        sh 'echo Hello World...'
+                                    }
+                                }
+                            }
+                        }""",
                 repoDir.toURI());
 
         job.setDefinition(new CpsFlowDefinition(pipelineScript, true));

@@ -1,49 +1,49 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
 
 import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import io.opentelemetry.api.trace.Span;
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-public class JobMetadataTest {
-
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+@ExtendWith(MockitoExtension.class)
+@WithJenkins
+class JobMetadataTest {
 
     @Mock
     private Span span;
 
     private JobMetadata jobMetadata;
 
-    @Before
-    public void setUp() throws IOException, ExecutionException, InterruptedException {
+    private JenkinsRule jenkinsRule;
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) throws Exception {
+        jenkinsRule = rule;
         jenkinsRule.jenkins.setNumExecutors(2);
         FreeStyleProject project = jenkinsRule.createFreeStyleProject("test-job");
         FreeStyleBuild build = project.scheduleBuild2(0).get();
         jobMetadata = new JobMetadata(build);
     }
 
-    @Before
-    public void resetMocks() {
+    @AfterEach
+    void afterEach() {
         reset(span);
     }
 
     @Test
-    public void testOnlyAddRepositoryURL() {
+    void testOnlyAddRepositoryURL() {
         jobMetadata.addRepositoryURL("SOURCE", "https://github.com/owner/repo.git");
 
         jobMetadata.setCommonSpanAttributes(span);
@@ -61,7 +61,7 @@ public class JobMetadataTest {
     }
 
     @Test
-    public void testWithProjectRepositoryURL() {
+    void testWithProjectRepositoryURL() {
         jobMetadata.addRepositoryURL("PROJECT", "https://github.com/owner/repo-project.git");
 
         EnvVars envVars = new EnvVars();
@@ -85,7 +85,7 @@ public class JobMetadataTest {
     }
 
     @Test
-    public void testSetSCMCheckoutInfoFromEnvs() {
+    void testSetSCMCheckoutInfoFromEnvs() {
         EnvVars envVars = new EnvVars();
         envVars.put("GIT_URL", "https://github.com/owner/repo.git");
         envVars.put("GIT_COMMIT", "abcdef123456");
@@ -107,7 +107,7 @@ public class JobMetadataTest {
     }
 
     @Test
-    public void testGetRepositoryName() {
+    void testGetRepositoryName() {
         assertEquals("owner/repo", JobMetadata.getRepositoryName("https://github.com/owner/repo.git"));
         assertEquals("owner/repo", JobMetadata.getRepositoryName("git@github.com:owner/repo.git"));
         assertEquals("owner/repo", JobMetadata.getRepositoryName("https://github.com/owner/repo"));
