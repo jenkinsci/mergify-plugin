@@ -7,13 +7,12 @@ import hudson.model.Result;
 import hudson.model.Run;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("unchecked")
-public class TraceUtilsTest {
+class TraceUtilsTest {
 
     @Test
-    public void testEndJobSpan_Success() {
+    void testEndJobSpan_Success() {
         Span span = mock(Span.class);
         Run<?, ?> run = mock(Run.class);
         Job<?, ?> job = mock(Job.class);
@@ -30,7 +29,7 @@ public class TraceUtilsTest {
     }
 
     @Test
-    public void testEndJobSpan_NotBuilt() {
+    void testEndJobSpan_NotBuilt() {
         Span span = mock(Span.class);
         Run<?, ?> run = mock(Run.class);
         Job<?, ?> job = mock(Job.class);
@@ -47,7 +46,7 @@ public class TraceUtilsTest {
     }
 
     @Test
-    public void testEndJobSpan_Failure() {
+    void testEndJobSpan_Failure() {
         Span span = mock(Span.class);
         Run<?, ?> run = mock(Run.class);
         Job<?, ?> job = mock(Job.class);
@@ -64,7 +63,7 @@ public class TraceUtilsTest {
     }
 
     @Test
-    public void testEndJobSpan_Aborted() {
+    void testEndJobSpan_Aborted() {
         Span span = mock(Span.class);
         Run<?, ?> run = mock(Run.class);
         Job<?, ?> job = mock(Job.class);
@@ -81,7 +80,7 @@ public class TraceUtilsTest {
     }
 
     @Test
-    public void testEndJobSpan_Unstable() {
+    void testEndJobSpan_Unstable() {
         Span span = mock(Span.class);
         Run<?, ?> run = mock(Run.class);
         Job<?, ?> job = mock(Job.class);
@@ -97,7 +96,7 @@ public class TraceUtilsTest {
     }
 
     @Test
-    public void testEndJobSpan_Unknown() {
+    void testEndJobSpan_Unknown() {
         Span span = mock(Span.class);
         Run<?, ?> run = mock(Run.class);
         Job<?, ?> job = mock(Job.class);

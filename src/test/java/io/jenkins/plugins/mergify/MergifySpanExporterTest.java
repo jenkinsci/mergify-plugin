@@ -1,6 +1,6 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import io.opentelemetry.api.common.Attributes;
@@ -9,19 +9,20 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.Collection;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-public class MergifySpanExporterTest {
-    MergifyConfigurationProvider mockConfig;
-    OtlpHttpSpanExporter mockOtlpExporter;
+class MergifySpanExporterTest {
+
+    private MergifyConfigurationProvider mockConfig;
+    private OtlpHttpSpanExporter mockOtlpExporter;
     private MergifySpanExporter exporter;
     private SpanData mockSpanData;
     private ArgumentCaptor<Collection<SpanData>> exporterCaptor;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void beforeEach() {
         mockSpanData = mock(SpanData.class);
 
         mockConfig = mock(MergifyConfigurationProvider.class);
@@ -42,7 +43,7 @@ public class MergifySpanExporterTest {
     }
 
     @Test
-    public void testExport_Success() {
+    void testExport_Success() {
         Attributes attributes = Attributes.builder()
                 .put(TraceUtils.VCS_REPOSITORY_NAME, "org/repo")
                 .build();
@@ -60,7 +61,7 @@ public class MergifySpanExporterTest {
     }
 
     @Test
-    public void testExport_NoToken() {
+    void testExport_NoToken() {
         Attributes attributes = Attributes.builder()
                 .put(TraceUtils.VCS_REPOSITORY_NAME, "unknown/repo")
                 .build();
@@ -74,7 +75,7 @@ public class MergifySpanExporterTest {
     }
 
     @Test
-    public void testExport_ExceptionHandling() {
+    void testExport_ExceptionHandling() {
         Attributes attributes = Attributes.builder()
                 .put(TraceUtils.VCS_REPOSITORY_NAME, "org/repo")
                 .build();
@@ -97,19 +98,19 @@ public class MergifySpanExporterTest {
     }
 
     @Test
-    public void testFlush_Success() {
+    void testFlush_Success() {
         CompletableResultCode result = exporter.flush();
         assertTrue(result.isSuccess());
     }
 
     @Test
-    public void testShutdown_Success() {
+    void testShutdown_Success() {
         CompletableResultCode result = exporter.shutdown();
         assertTrue(result.isSuccess());
     }
 
     @Test
-    public void testToString() {
+    void testToString() {
         String output = exporter.toString();
         assertNotNull(output);
         assertTrue(output.contains("MergifySpanExporter"));

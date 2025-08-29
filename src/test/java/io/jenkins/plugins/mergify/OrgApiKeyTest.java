@@ -1,14 +1,14 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import hudson.util.Secret;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class OrgApiKeyTest {
+class OrgApiKeyTest {
 
     @Test
-    public void testOrgApiKeyConstructorAndGetters() {
+    void testOrgApiKeyConstructorAndGetters() {
         String organizationName = "my-org";
         Secret apiKey = Secret.fromString("my-secret-key");
 
@@ -20,7 +20,7 @@ public class OrgApiKeyTest {
     }
 
     @Test
-    public void testToString() {
+    void testToString() {
         OrgApiKey orgApiKey = new OrgApiKey("test-org", Secret.fromString("hidden-key"));
 
         String expectedString = "OrgApiKey{organizationName='test-org'}";
@@ -28,7 +28,7 @@ public class OrgApiKeyTest {
     }
 
     @Test
-    public void testDescriptorDisplayName() {
+    void testDescriptorDisplayName() {
         OrgApiKey.DescriptorImpl descriptor = new OrgApiKey.DescriptorImpl();
         assertEquals("GitHub Organization's Mergify CI Insights token", descriptor.getDisplayName());
     }

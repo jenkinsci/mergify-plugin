@@ -1,6 +1,6 @@
 package io.jenkins.plugins.mergify;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,14 +8,14 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class DashboardUrlBuilderTest {
+class DashboardUrlBuilderTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
-    public void testBuildUrl_AllParameters() throws Exception {
+    void testBuildUrl_AllParameters() throws Exception {
         String login = "testorg";
         String repository = "test-repo";
         String jobName = "test-job";
@@ -33,7 +33,7 @@ public class DashboardUrlBuilderTest {
     }
 
     @Test
-    public void testBuildUrl_NullRepository() throws Exception {
+    void testBuildUrl_NullRepository() throws Exception {
         String login = "testorg";
         String repository = null;
         String jobName = "test-job";
@@ -53,8 +53,7 @@ public class DashboardUrlBuilderTest {
         String encodedFilters = extractFiltersFromUrl(result);
         String decodedFilters =
                 URLDecoder.decode(URLDecoder.decode(encodedFilters, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
-        List<Map<String, Object>> filters =
-                mapper.readValue(decodedFilters, new TypeReference<List<Map<String, Object>>>() {});
+        List<Map<String, Object>> filters = MAPPER.readValue(decodedFilters, new TypeReference<>() {});
 
         assertEquals(2, filters.size()); // Only job_name and pipeline_name filters
         assertTrue(filters.stream().anyMatch(f -> "job_name".equals(f.get("field"))));
@@ -63,7 +62,7 @@ public class DashboardUrlBuilderTest {
     }
 
     @Test
-    public void testBuildUrl_SpecialCharacters() throws Exception {
+    void testBuildUrl_SpecialCharacters() throws Exception {
         String login = "test@org+space";
         String repository = "test-repo/with-slash";
         String jobName = "test job with spaces";
@@ -83,7 +82,7 @@ public class DashboardUrlBuilderTest {
     }
 
     @Test
-    public void testBuildUrl_EmptyStrings() throws Exception {
+    void testBuildUrl_EmptyStrings() throws Exception {
         String login = "";
         String repository = "";
         String jobName = "";
@@ -101,7 +100,7 @@ public class DashboardUrlBuilderTest {
     }
 
     @Test
-    public void testFilterGeneration() throws Exception {
+    void testFilterGeneration() throws Exception {
         String login = "testorg";
         String repository = "test-repo";
         String jobName = "test-job";
@@ -115,8 +114,7 @@ public class DashboardUrlBuilderTest {
         String encodedFilters = extractFiltersFromUrl(result);
         String decodedFilters =
                 URLDecoder.decode(URLDecoder.decode(encodedFilters, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
-        List<Map<String, Object>> filters =
-                mapper.readValue(decodedFilters, new TypeReference<List<Map<String, Object>>>() {});
+        List<Map<String, Object>> filters = MAPPER.readValue(decodedFilters, new TypeReference<>() {});
 
         // Verify we have exactly 3 filters
         assertEquals(3, filters.size());
@@ -150,7 +148,7 @@ public class DashboardUrlBuilderTest {
     }
 
     @Test
-    public void testDoubleUrlEncoding() throws Exception {
+    void testDoubleUrlEncoding() throws Exception {
         String login = "testorg";
         String repository = "test-repo";
         String jobName = "test job";
@@ -168,14 +166,13 @@ public class DashboardUrlBuilderTest {
         String doubleDecoded = URLDecoder.decode(singleDecoded, StandardCharsets.UTF_8);
 
         // Should be able to parse as JSON after double decoding
-        List<Map<String, Object>> filters =
-                mapper.readValue(doubleDecoded, new TypeReference<List<Map<String, Object>>>() {});
+        List<Map<String, Object>> filters = MAPPER.readValue(doubleDecoded, new TypeReference<>() {});
         assertNotNull(filters);
         assertEquals(3, filters.size());
     }
 
     @Test
-    public void testUrlStructure() throws Exception {
+    void testUrlStructure() throws Exception {
         String login = "testorg";
         String repository = "test-repo";
         String jobName = "test-job";
