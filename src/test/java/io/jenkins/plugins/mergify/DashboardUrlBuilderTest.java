@@ -20,15 +20,15 @@ class DashboardUrlBuilderTest {
         String repository = "test-repo";
         String jobName = "test-job";
         String pipelineName = "test-pipeline";
-        String jobTraceId = "trace123";
-        String jobSpanId = "span456";
+        String jobTraceId = "e04570a053e8a2bf0dd2b2f3bda2528a";
+        String jobSpanId = "ac3ec1a1cc6d0090";
 
         String result = DashboardUrlBuilder.buildUrl(login, repository, jobName, pipelineName, jobTraceId, jobSpanId);
 
         assertNotNull(result);
         assertTrue(result.startsWith("/ci-insights/jobs?filters="));
-        assertTrue(result.contains("&job_trace_id=dHJhY2UxMjM"));
-        assertTrue(result.contains("&job_span_id=c3BhbjQ1Ng"));
+        assertTrue(result.contains("&job_trace_id=4EVwoFPoor8N0rLzvaJSig"));
+        assertTrue(result.contains("&job_span_id=rD7BocxtAJA"));
         assertTrue(result.contains("&login=testorg"));
     }
 
@@ -38,15 +38,15 @@ class DashboardUrlBuilderTest {
         String repository = null;
         String jobName = "test-job";
         String pipelineName = "test-pipeline";
-        String jobTraceId = "trace123";
-        String jobSpanId = "span456";
+        String jobTraceId = "e04570a053e8a2bf0dd2b2f3bda2528a";
+        String jobSpanId = "ac3ec1a1cc6d0090";
 
         String result = DashboardUrlBuilder.buildUrl(login, repository, jobName, pipelineName, jobTraceId, jobSpanId);
 
         assertNotNull(result);
         assertTrue(result.startsWith("/ci-insights/jobs?filters="));
-        assertTrue(result.contains("&job_trace_id=dHJhY2UxMjM"));
-        assertTrue(result.contains("&job_span_id=c3BhbjQ1Ng"));
+        assertTrue(result.contains("&job_trace_id=4EVwoFPoor8N0rLzvaJSig"));
+        assertTrue(result.contains("&job_span_id=rD7BocxtAJA"));
         assertTrue(result.contains("&login=testorg"));
 
         // Verify that repository filter is not included when null
@@ -67,8 +67,8 @@ class DashboardUrlBuilderTest {
         String repository = "test-repo/with-slash";
         String jobName = "test job with spaces";
         String pipelineName = "pipeline&name=special";
-        String jobTraceId = "trace+123&test";
-        String jobSpanId = "span/456?test";
+        String jobTraceId = "e04570a053e8a2bf0dd2b2f3bda2528a";
+        String jobSpanId = "ac3ec1a1cc6d0090";
 
         String result = DashboardUrlBuilder.buildUrl(login, repository, jobName, pipelineName, jobTraceId, jobSpanId);
 
@@ -77,8 +77,8 @@ class DashboardUrlBuilderTest {
 
         // Verify URL encoding works correctly
         assertTrue(result.contains("&login=test%40org%2Bspace"));
-        assertTrue(result.contains("&job_trace_id=dHJhY2UrMTIzJnRlc3Q"));
-        assertTrue(result.contains("&job_span_id=c3Bhbi80NTY_dGVzdA"));
+        assertTrue(result.contains("&job_trace_id=4EVwoFPoor8N0rLzvaJSig"));
+        assertTrue(result.contains("&job_span_id=rD7BocxtAJA"));
     }
 
     @Test
@@ -105,8 +105,8 @@ class DashboardUrlBuilderTest {
         String repository = "test-repo";
         String jobName = "test-job";
         String pipelineName = "test-pipeline";
-        String jobTraceId = "trace123";
-        String jobSpanId = "span456";
+        String jobTraceId = "e04570a053e8a2bf0dd2b2f3bda2528a";
+        String jobSpanId = "ac3ec1a1cc6d0090";
 
         String result = DashboardUrlBuilder.buildUrl(login, repository, jobName, pipelineName, jobTraceId, jobSpanId);
 
@@ -153,8 +153,8 @@ class DashboardUrlBuilderTest {
         String repository = "test-repo";
         String jobName = "test job";
         String pipelineName = "test pipeline";
-        String jobTraceId = "trace123";
-        String jobSpanId = "span456";
+        String jobTraceId = "e04570a053e8a2bf0dd2b2f3bda2528a";
+        String jobSpanId = "ac3ec1a1cc6d0090";
 
         String result = DashboardUrlBuilder.buildUrl(login, repository, jobName, pipelineName, jobTraceId, jobSpanId);
 
@@ -177,8 +177,8 @@ class DashboardUrlBuilderTest {
         String repository = "test-repo";
         String jobName = "test-job";
         String pipelineName = "test-pipeline";
-        String jobTraceId = "trace123";
-        String jobSpanId = "span456";
+        String jobTraceId = "e04570a053e8a2bf0dd2b2f3bda2528a";
+        String jobSpanId = "ac3ec1a1cc6d0090";
 
         String result = DashboardUrlBuilder.buildUrl(login, repository, jobName, pipelineName, jobTraceId, jobSpanId);
 

@@ -1,5 +1,7 @@
 package io.jenkins.plugins.mergify;
 
+import static io.jenkins.cli.shaded.net.i2p.crypto.eddsa.Utils.hexToBytes;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -31,14 +33,12 @@ public class DashboardUrlBuilder {
         // Build final URL
         String url = String.format(
                 "/ci-insights/jobs?filters=%s&job_trace_id=%s&job_span_id=%s",
-                encoded,
-                java.util.Base64.getUrlEncoder()
-                        .withoutPadding()
-                        .encodeToString(jobTraceId.getBytes(StandardCharsets.UTF_8)),
-                java.util.Base64.getUrlEncoder()
-                        .withoutPadding()
-                        .encodeToString(jobSpanId.getBytes(StandardCharsets.UTF_8)));
+                encoded, encodeId(jobTraceId), encodeId(jobSpanId));
         return String.format("%s&login=%s", url, URLEncoder.encode(login, StandardCharsets.UTF_8));
+    }
+
+    private static String encodeId(String id) {
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hexToBytes(id));
     }
 
     private static Map<String, Object> makeFilter(String field, String operator, List<String> value) {
