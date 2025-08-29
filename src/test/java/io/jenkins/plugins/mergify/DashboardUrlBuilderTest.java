@@ -27,8 +27,8 @@ class DashboardUrlBuilderTest {
 
         assertNotNull(result);
         assertTrue(result.startsWith("/ci-insights/jobs?filters="));
-        assertTrue(result.contains("&job_trace_id=trace123"));
-        assertTrue(result.contains("&job_span_id=span456"));
+        assertTrue(result.contains("&job_trace_id=dHJhY2UxMjM"));
+        assertTrue(result.contains("&job_span_id=c3BhbjQ1Ng"));
         assertTrue(result.contains("&login=testorg"));
     }
 
@@ -45,8 +45,8 @@ class DashboardUrlBuilderTest {
 
         assertNotNull(result);
         assertTrue(result.startsWith("/ci-insights/jobs?filters="));
-        assertTrue(result.contains("&job_trace_id=trace123"));
-        assertTrue(result.contains("&job_span_id=span456"));
+        assertTrue(result.contains("&job_trace_id=dHJhY2UxMjM"));
+        assertTrue(result.contains("&job_span_id=c3BhbjQ1Ng"));
         assertTrue(result.contains("&login=testorg"));
 
         // Verify that repository filter is not included when null
@@ -77,8 +77,8 @@ class DashboardUrlBuilderTest {
 
         // Verify URL encoding works correctly
         assertTrue(result.contains("&login=test%40org%2Bspace"));
-        assertTrue(result.contains("&job_trace_id=trace%2B123%26test"));
-        assertTrue(result.contains("&job_span_id=span%2F456%3Ftest"));
+        assertTrue(result.contains("&job_trace_id=dHJhY2UrMTIzJnRlc3Q"));
+        assertTrue(result.contains("&job_span_id=c3Bhbi80NTY_dGVzdA"));
     }
 
     @Test

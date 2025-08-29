@@ -32,8 +32,12 @@ public class DashboardUrlBuilder {
         String url = String.format(
                 "/ci-insights/jobs?filters=%s&job_trace_id=%s&job_span_id=%s",
                 encoded,
-                URLEncoder.encode(jobTraceId, StandardCharsets.UTF_8),
-                URLEncoder.encode(jobSpanId, StandardCharsets.UTF_8));
+                java.util.Base64.getUrlEncoder()
+                        .withoutPadding()
+                        .encodeToString(jobTraceId.getBytes(StandardCharsets.UTF_8)),
+                java.util.Base64.getUrlEncoder()
+                        .withoutPadding()
+                        .encodeToString(jobSpanId.getBytes(StandardCharsets.UTF_8)));
         return String.format("%s&login=%s", url, URLEncoder.encode(login, StandardCharsets.UTF_8));
     }
 
