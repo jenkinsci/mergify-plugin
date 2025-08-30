@@ -1,7 +1,5 @@
 package io.jenkins.plugins.mergify;
 
-import static io.jenkins.cli.shaded.net.i2p.crypto.eddsa.Utils.hexToBytes;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -38,7 +36,9 @@ public class DashboardUrlBuilder {
     }
 
     private static String encodeId(String id) {
-        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hexToBytes(id));
+        HexFormat formatter = HexFormat.of();
+        byte[] bytes = formatter.parseHex(id);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private static Map<String, Object> makeFilter(String field, String operator, List<String> value) {
