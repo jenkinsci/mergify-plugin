@@ -82,6 +82,24 @@ class JobMetadataTest {
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo-project.git");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "PROJECT");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_NAME, "owner/repo-project");
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME, "Default");
+    }
+
+    @Test
+    void testRunnerOverrideUsedInsteadOfJobRunner() {
+        jobMetadata.addRepositoryURL("PROJECT", "https://github.com/owner/repo.git");
+
+        EnvVars envVars = new EnvVars();
+        envVars.put("GIT_COMMIT", "abcdef123456");
+        envVars.put("GIT_BRANCH", "origin/main");
+        jobMetadata.setSCMCheckoutInfoFromEnvs(envVars);
+
+        RunnerInfo override = new RunnerInfo(null, "linux-agent-42", java.util.List.of("linux", "amd64"));
+        jobMetadata.setCommonSpanAttributes(span, override);
+
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_NAME, "linux-agent-42");
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_LABELS, java.util.List.of("linux", "amd64"));
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME, "Default");
     }
 
     @Test

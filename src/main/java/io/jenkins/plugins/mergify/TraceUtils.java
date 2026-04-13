@@ -37,6 +37,8 @@ public class TraceUtils {
     public static final AttributeKey<Long> CICD_PIPELINE_RUNNER_ID = AttributeKey.longKey("cicd.pipeline.runner.id");
     public static final AttributeKey<String> CICD_PIPELINE_RUNNER_NAME =
             AttributeKey.stringKey("cicd.pipeline.runner.name");
+    public static final AttributeKey<String> CICD_PIPELINE_RUNNER_GROUP_NAME =
+            AttributeKey.stringKey("cicd.pipeline.runner.group.name");
 
     // PIPELINE TASK ATTRIBUTES
     public static final AttributeKey<String> CICD_PIPELINE_TASK_RUN_ID =
@@ -100,6 +102,10 @@ public class TraceUtils {
     }
 
     public static void endJobStepSpan(Span span, Run<?, ?> run, boolean isError) {
+        endJobStepSpan(span, run, isError, null);
+    }
+
+    public static void endJobStepSpan(Span span, Run<?, ?> run, boolean isError, RunnerInfo runnerOverride) {
         if (span == null) {
             LOGGER.fine("Got completed stage/step without span");
             return;
@@ -111,7 +117,7 @@ public class TraceUtils {
         }
 
         JobMetadata jobSpanMetadata = getJobMetadata(run);
-        jobSpanMetadata.setCommonSpanAttributes(span);
+        jobSpanMetadata.setCommonSpanAttributes(span, runnerOverride);
 
         if (isError) {
             span.setAttribute(CICD_PIPELINE_TASK_RUN_RESULT, "failure");
