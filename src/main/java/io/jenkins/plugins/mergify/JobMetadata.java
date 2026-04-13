@@ -8,6 +8,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,9 @@ public class JobMetadata implements Action {
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
-        this.pipelineCreatedAt = run.getTimeInMillis();
+        // Nanoseconds: matches the unit of OTEL span start/end times so the
+        // backend can apply the same /1e9 conversion uniformly.
+        this.pipelineCreatedAt = TimeUnit.MILLISECONDS.toNanos(run.getTimeInMillis());
 
         // For freestyle jobs, the executor is the final answer at onStarted time.
         // For pipeline jobs, it's the flyweight executor on built-in; the real

@@ -8,6 +8,7 @@ import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import io.opentelemetry.api.trace.Span;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ class JobMetadataTest {
     private Span span;
 
     private JobMetadata jobMetadata;
+    private FreeStyleBuild build;
 
     private JenkinsRule jenkinsRule;
 
@@ -33,7 +35,7 @@ class JobMetadataTest {
         jenkinsRule = rule;
         jenkinsRule.jenkins.setNumExecutors(2);
         FreeStyleProject project = jenkinsRule.createFreeStyleProject("test-job");
-        FreeStyleBuild build = project.scheduleBuild2(0).get();
+        build = project.scheduleBuild2(0).get();
         jobMetadata = new JobMetadata(build);
     }
 
@@ -122,6 +124,21 @@ class JobMetadataTest {
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo.git");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "SCMCheckoutURL");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_NAME, "owner/repo");
+    }
+
+    @Test
+    void testCreatedAtAttributeIsNanoseconds() {
+        jobMetadata.addRepositoryURL("PROJECT", "https://github.com/owner/repo.git");
+
+        EnvVars envVars = new EnvVars();
+        envVars.put("GIT_COMMIT", "abcdef123456");
+        envVars.put("GIT_BRANCH", "origin/main");
+        jobMetadata.setSCMCheckoutInfoFromEnvs(envVars);
+
+        jobMetadata.setCommonSpanAttributes(span);
+
+        long expected = TimeUnit.MILLISECONDS.toNanos(build.getTimeInMillis());
+        verify(span).setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, expected);
     }
 
     @Test
