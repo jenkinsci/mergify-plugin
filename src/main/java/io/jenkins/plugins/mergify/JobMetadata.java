@@ -2,7 +2,6 @@ package io.jenkins.plugins.mergify;
 
 import hudson.EnvVars;
 import hudson.model.*;
-import hudson.model.labels.LabelAtom;
 import hudson.plugins.git.*;
 import hudson.plugins.git.util.BuildData;
 import io.opentelemetry.api.trace.Span;
@@ -12,19 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 
 public class JobMetadata implements Action {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
     private final String pipelineName;
     private final String pipelineId;
     private final String pipelineUrl;
-    private final String pipelineRunnerName;
-    private final List<String> pipelineLabels;
-    private final Integer pipelineRunnerId;
     private final Long pipelineCreatedAt;
+    private volatile RunnerInfo runnerInfo;
+    private volatile boolean runnerInfoUpgraded;
     private volatile String SCMCheckoutBranch;
     private volatile String SCMCheckoutCommit;
     private Map<String, String> repositoryURLs;
@@ -37,33 +35,25 @@ public class JobMetadata implements Action {
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
-
         this.pipelineCreatedAt = run.getTimeInMillis();
 
-        // FIXME(sileht): This has two design issues:
-        // * When the job start, the executor is always built-in
-        // * A stage/step can run on different nodes
-        Executor executor = run.getExecutor();
-        if (executor == null) {
-            LOGGER.warning("Run executor is null, cannot set pipeline runner info");
-            this.pipelineRunnerId = null;
-            this.pipelineRunnerName = null;
-            this.pipelineLabels = List.of();
+        // For freestyle jobs, the executor is the final answer at onStarted time.
+        // For pipeline jobs, it's the flyweight executor on built-in; the real
+        // agent is discovered later when a node { } block runs and
+        // upgradeRunnerInfo is called with the agent from the flow graph.
+        if (run instanceof WorkflowRun) {
+            this.runnerInfo = null;
+        } else {
+            this.runnerInfo = RunnerInfo.fromExecutor(run.getExecutor());
+        }
+    }
+
+    public synchronized void upgradeRunnerInfo(RunnerInfo info) {
+        if (info == null || runnerInfoUpgraded) {
             return;
         }
-
-        Computer computer = executor.getOwner();
-        String nodeName = computer.getName();
-        this.pipelineRunnerId = executor.getNumber();
-        this.pipelineRunnerName = nodeName.isEmpty() ? "built-in" : nodeName;
-
-        Node node = executor.getOwner().getNode();
-        if (node == null) {
-            this.pipelineLabels = List.of();
-        } else {
-            Set<LabelAtom> labels = node.getAssignedLabels();
-            this.pipelineLabels = labels.stream().map(LabelAtom::getName).collect(Collectors.toList());
-        }
+        this.runnerInfo = info;
+        this.runnerInfoUpgraded = true;
     }
 
     static String getRepositoryName(String url) {
@@ -135,6 +125,10 @@ public class JobMetadata implements Action {
     }
 
     public void setCommonSpanAttributes(Span span) {
+        setCommonSpanAttributes(span, null);
+    }
+
+    public void setCommonSpanAttributes(Span span, RunnerInfo runnerOverride) {
         if (repositoryURLs.isEmpty()) {
             LOGGER.warning("repositoryURLs is empty, skipping span");
             return;
@@ -156,18 +150,21 @@ public class JobMetadata implements Action {
         span.setAttribute(TraceUtils.CICD_PIPELINE_ID, pipelineId);
         span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
-        span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, pipelineLabels);
+        span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME, RunnerInfo.DEFAULT_GROUP_NAME);
         if (SCMCheckoutBranch != null) {
             span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, SCMCheckoutBranch.replaceFirst("^[^/]+/", ""));
         } else {
             span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "<unknown>");
         }
         span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
-        if (pipelineRunnerId != null) {
-            span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_ID, pipelineRunnerId);
-        }
-        if (pipelineRunnerName != null) {
-            span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_NAME, pipelineRunnerName);
+
+        RunnerInfo effectiveRunner = runnerOverride != null ? runnerOverride : runnerInfo;
+        if (effectiveRunner != null) {
+            span.setAttribute(TraceUtils.CICD_PIPELINE_LABELS, effectiveRunner.getLabels());
+            span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_NAME, effectiveRunner.getName());
+            if (effectiveRunner.getId() != null) {
+                span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_ID, effectiveRunner.getId());
+            }
         }
 
         for (Map.Entry<String, String> entry : repositoryURLs.entrySet()) {

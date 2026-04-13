@@ -24,9 +24,11 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
+import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.Step;
@@ -38,6 +40,7 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
     private static final Map<FlowNode, Span> stageSpans = new ConcurrentHashMap<>();
     private static final Map<BuildStep, Span> stepSpans = new ConcurrentHashMap<>();
     private static final Map<Run<?, ?>, Span> buildSpans = new ConcurrentHashMap<>();
+    private static final Map<FlowNode, RunnerInfo> stageRunners = new ConcurrentHashMap<>();
 
     @CheckForNull
     private static WorkflowRun getWorkflowRun(@NonNull FlowNode flowNode) {
@@ -102,6 +105,39 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
                 }
             }
         }
+
+        trackRunnerInfo(node);
+    }
+
+    // When a pipeline node runs inside a `node { }` block (ExecutorStep), the enclosing
+    // block carries a WorkspaceAction with the agent name. Capture it into the
+    // JobMetadata (first-wins for job-level) and the stageRunners map (first-wins per stage).
+    private static void trackRunnerInfo(FlowNode node) {
+        WorkspaceAction workspace = null;
+        for (BlockStartNode block : node.getEnclosingBlocks()) {
+            WorkspaceAction action = block.getAction(WorkspaceAction.class);
+            if (action != null) {
+                workspace = action;
+                break;
+            }
+        }
+        if (workspace == null) {
+            return;
+        }
+
+        RunnerInfo info = RunnerInfo.fromNodeName(workspace.getNode());
+
+        WorkflowRun run = getWorkflowRun(node);
+        if (run != null) {
+            TraceUtils.getJobMetadata(run).upgradeRunnerInfo(info);
+        }
+
+        for (BlockStartNode enclosing : node.getEnclosingBlocks()) {
+            if (isStageStartNode(enclosing)) {
+                stageRunners.putIfAbsent(enclosing, info);
+                break;
+            }
+        }
     }
 
     // Pipeline and Freestyle Job listener
@@ -138,11 +174,12 @@ public class Listener extends RunListener<Run<?, ?>> implements GraphListener.Sy
 
     private void endStageSpan(StepEndNode stepEndNode) {
         StepStartNode stepStartNode = stepEndNode.getStartNode();
-        Span span = stageSpans.get(stepStartNode);
+        Span span = stageSpans.remove(stepStartNode);
 
         WorkflowRun run = getWorkflowRun(stepStartNode);
         ErrorAction error = stepEndNode.getError();
-        TraceUtils.endJobStepSpan(span, run, error != null);
+        RunnerInfo stageRunner = stageRunners.remove(stepStartNode);
+        TraceUtils.endJobStepSpan(span, run, error != null, stageRunner);
 
         String stageName = getStageName(stepStartNode);
         LOGGER.fine("Stage stopped: " + stageName);

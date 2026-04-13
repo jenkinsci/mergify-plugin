@@ -1,14 +1,17 @@
 package io.jenkins.plugins.mergify;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.ExtensionList;
 import hudson.model.FreeStyleProject;
+import hudson.model.Label;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
+import hudson.slaves.DumbSlave;
 import hudson.tasks.Fingerprinter;
 import hudson.tasks.Shell;
 import io.jenkins.plugins.casc.ConfigurationAsCode;
@@ -138,6 +141,8 @@ class IntegrationTest {
             assertEquals("https://github.com/mergifyio/plugin/", attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
             assertEquals("GitHubProjectProperty", attributes.get(TraceUtils.VCS_REPOSITORY_URL_SOURCE));
             assertEquals("mergifyio/plugin", attributes.get(TraceUtils.VCS_REPOSITORY_NAME));
+            assertEquals("built-in", attributes.get(TraceUtils.CICD_PIPELINE_RUNNER_NAME));
+            assertEquals("Default", attributes.get(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME));
         }
 
         // Step Attributes
@@ -201,11 +206,67 @@ class IntegrationTest {
             assertEquals("https://github.com/mergifyio/plugin/", attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
             assertEquals("GitHubProjectProperty", attributes.get(TraceUtils.VCS_REPOSITORY_URL_SOURCE));
             assertEquals("mergifyio/plugin", attributes.get(TraceUtils.VCS_REPOSITORY_NAME));
+            assertEquals("built-in", attributes.get(TraceUtils.CICD_PIPELINE_RUNNER_NAME));
+            assertEquals("Default", attributes.get(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME));
         }
 
         // Step Attributes expected:<Stage([Checkout])> but was:<Stage([{ (Checkout)])>
         assertEquals(
                 "Stage({ (Checkout))", spans.get(0).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
         assertEquals("Stage({ (Build))", spans.get(1).getAttributes().asMap().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+    }
+
+    @Test
+    void testPipelineJobWithPerStageAgent() throws Exception {
+        final String jobName = "test-pipeline-agent";
+
+        DumbSlave linuxAgent = jenkinsRule.createOnlineSlave(Label.parseExpression("linux"));
+
+        WorkflowJob job = jenkinsRule.createProject(WorkflowJob.class, jobName);
+
+        File repoDir = createGitRepository(jobName);
+
+        String pipelineScript = String.format(
+                """
+                        pipeline {
+                            agent none
+                            stages {
+                                stage('Build') {
+                                    agent { label 'linux' }
+                                    steps {
+                                        checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])
+                                        sh 'echo hi'
+                                    }
+                                }
+                            }
+                        }""",
+                repoDir.toURI());
+
+        job.setDefinition(new CpsFlowDefinition(pipelineScript, true));
+        job.addProperty(new GithubProjectProperty("https://github.com/mergifyio/plugin"));
+
+        jenkinsRule.buildAndAssertSuccess(job);
+
+        List<SpanData> spans = getSpans();
+
+        SpanData stageSpan = spans.stream()
+                .filter(s -> "step".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(stageSpan, "expected a stage span");
+
+        Map<AttributeKey<?>, Object> stageAttrs = stageSpan.getAttributes().asMap();
+        assertEquals(linuxAgent.getNodeName(), stageAttrs.get(TraceUtils.CICD_PIPELINE_RUNNER_NAME));
+        @SuppressWarnings("unchecked")
+        List<String> stageLabels = (List<String>) stageAttrs.get(TraceUtils.CICD_PIPELINE_LABELS);
+        assertTrue(stageLabels.contains("linux"), "stage labels should contain 'linux'; got " + stageLabels);
+
+        SpanData jobSpan = spans.stream()
+                .filter(s -> "job".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(jobSpan, "expected a job span");
+        Map<AttributeKey<?>, Object> jobAttrs = jobSpan.getAttributes().asMap();
+        assertEquals(linuxAgent.getNodeName(), jobAttrs.get(TraceUtils.CICD_PIPELINE_RUNNER_NAME));
     }
 }
