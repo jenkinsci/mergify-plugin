@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jenkins.branch.MultiBranchProject;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -32,7 +33,9 @@ public class JobMetadata implements Action {
 
     public JobMetadata(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
-        this.pipelineName = job.getFullDisplayName();
+        this.pipelineName = job.getParent() instanceof MultiBranchProject<?, ?> project
+                ? project.getFullName()
+                : job.getFullDisplayName();
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
@@ -57,6 +60,16 @@ public class JobMetadata implements Action {
         }
         this.runnerInfo = info;
         this.runnerInfoUpgraded = true;
+    }
+
+    /**
+     * The pipeline and job name of the job's runs. A branch or pull request job of a
+     * multibranch project takes the project's full name (JOB_NAME without its branch
+     * segment), so every branch and pull request shares one history. Its own display
+     * name would carry the pull request title, which can change.
+     */
+    public String getPipelineName() {
+        return pipelineName;
     }
 
     // Drops what Jenkins can put in front of a branch name: the "*/" of a branch

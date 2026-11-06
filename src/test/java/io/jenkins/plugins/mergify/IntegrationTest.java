@@ -20,17 +20,28 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import jenkins.branch.BranchSource;
+import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
+import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
+import jenkins.scm.impl.mock.MockSCMSource;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 @WithJenkins
@@ -268,5 +279,61 @@ class IntegrationTest {
         assertNotNull(jobSpan, "expected a job span");
         Map<AttributeKey<?>, Object> jobAttrs = jobSpan.getAttributes().asMap();
         assertEquals(linuxAgent.getNodeName(), jobAttrs.get(TraceUtils.CICD_PIPELINE_RUNNER_NAME));
+    }
+
+    @Test
+    void testMultibranchJobs() throws Exception {
+        File repoDir = createGitRepository("test-multibranch");
+        String jenkinsfile = String.format(
+                """
+                        node {
+                            checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])
+                        }""",
+                repoDir.toURI());
+
+        MockFolder folder = jenkinsRule.createFolder("team");
+        WorkflowJob plainJob = folder.createProject(WorkflowJob.class, "plain");
+        plainJob.setDefinition(new CpsFlowDefinition(jenkinsfile, true));
+        WorkflowRun plainRun = jenkinsRule.buildAndAssertSuccess(plainJob);
+
+        try (MockSCMController controller = MockSCMController.create()) {
+            controller.createRepository("my-repo");
+            controller.addFile(
+                    "my-repo",
+                    "master",
+                    "add Jenkinsfile",
+                    "Jenkinsfile",
+                    jenkinsfile.getBytes(StandardCharsets.UTF_8));
+            controller.cloneBranch("my-repo", "master", "feature/x");
+            String changeRequest = "CR-" + controller.openChangeRequest("my-repo", "master");
+
+            WorkflowMultiBranchProject project = folder.createProject(WorkflowMultiBranchProject.class, "my-repo");
+            project.getSourcesList()
+                    .add(new BranchSource(new MockSCMSource(
+                            controller,
+                            "my-repo",
+                            new MockSCMDiscoverBranches(),
+                            new MockSCMDiscoverChangeRequests(ChangeRequestCheckoutStrategy.HEAD))));
+            project.scheduleBuild2(0).getFuture().get();
+            jenkinsRule.waitUntilNoActivity();
+
+            Map<String, SpanData> jobSpanByRun = getSpans().stream()
+                    .filter(s -> "job".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
+                    .collect(Collectors.toMap(s -> s.getAttributes().get(TraceUtils.CICD_PIPELINE_RUN_ID), s -> s));
+            assertEquals(4, jobSpanByRun.size());
+
+            for (String branchJob : List.of("master", "feature%2Fx", changeRequest)) {
+                WorkflowRun run = jenkinsRule.assertBuildStatusSuccess(
+                        project.getItem(branchJob).getLastBuild());
+                SpanData jobSpan = jobSpanByRun.get(run.getExternalizableId());
+                assertNotNull(jobSpan, "no job span for " + run);
+                assertEquals("team/my-repo", jobSpan.getName());
+                assertEquals("team/my-repo", jobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_NAME));
+                assertEquals("team/my-repo", jobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
+            }
+            SpanData plainJobSpan = jobSpanByRun.get(plainRun.getExternalizableId());
+            assertEquals("team » plain", plainJobSpan.getName());
+            assertEquals("team » plain", plainJobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_NAME));
+        }
     }
 }
