@@ -160,16 +160,17 @@ public class TraceUtils {
             return null;
         }
         Job<?, ?> job = run.getParent();
+        JobMetadata jobSpanMetadata = getJobMetadata(run);
         Tracer tracer = TracerService.getTracer();
-        Span span = tracer.spanBuilder(job.getFullDisplayName())
+        // CI Insights names the job run after the span.
+        Span span = tracer.spanBuilder(jobSpanMetadata.getPipelineName())
                 .setSpanKind(SpanKind.SERVER)
                 .setAttribute(CICD_PIPELINE_SCOPE, "job")
                 .setAttribute(CICD_PIPELINE_TASK_SCOPE, "job")
-                .setAttribute(CICD_PIPELINE_TASK_NAME, job.getFullDisplayName())
+                .setAttribute(CICD_PIPELINE_TASK_NAME, jobSpanMetadata.getPipelineName())
                 .setAttribute(CICD_PIPELINE_TASK_RUN_ID, job.getFullDisplayName())
                 .startSpan();
 
-        JobMetadata jobSpanMetadata = getJobMetadata(run);
         jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(run));
         jobSpanMetadata.addRepositoryURL("SCMRemoteURL", getSCMRepositoryUrl(run));
         jobSpanMetadata.setSpanContext(span.getSpanContext());
