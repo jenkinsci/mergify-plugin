@@ -142,6 +142,18 @@ class JobMetadataTest {
     }
 
     @Test
+    void testGetBranchName() {
+        assertEquals("main", JobMetadata.getBranchName("origin/main"));
+        assertEquals("main", JobMetadata.getBranchName("*/main"));
+        assertEquals("main", JobMetadata.getBranchName("refs/heads/main"));
+        assertEquals("feature/x", JobMetadata.getBranchName("origin/feature/x"));
+        assertEquals("feature/x", JobMetadata.getBranchName("refs/remotes/origin/feature/x"));
+        // How a multibranch checkout names a branch or a pull request.
+        assertEquals("feature/x", JobMetadata.getBranchName("feature/x"));
+        assertEquals("PR-123", JobMetadata.getBranchName("PR-123"));
+    }
+
+    @Test
     void testGetRepositoryName() {
         assertEquals("owner/repo", JobMetadata.getRepositoryName("https://github.com/owner/repo.git"));
         assertEquals("owner/repo", JobMetadata.getRepositoryName("git@github.com:owner/repo.git"));
