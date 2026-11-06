@@ -59,6 +59,13 @@ public class JobMetadata implements Action {
         this.runnerInfoUpgraded = true;
     }
 
+    // Drops what Jenkins can put in front of a branch name: the "*/" of a branch
+    // spec, "refs/heads/", or the remote of a remote-tracking branch ("origin/main").
+    // Nothing else: a multibranch checkout names the branch as it is ("feature/x").
+    static String getBranchName(String branch) {
+        return branch.replaceFirst("^(\\*/|refs/heads/|refs/remotes/[^/]+/|origin/)", "");
+    }
+
     static String getRepositoryName(String url) {
         if (url == null || url.isEmpty()) {
             return null; // Handle invalid cases
@@ -155,7 +162,7 @@ public class JobMetadata implements Action {
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME, RunnerInfo.DEFAULT_GROUP_NAME);
         if (SCMCheckoutBranch != null) {
-            span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, SCMCheckoutBranch.replaceFirst("^[^/]+/", ""));
+            span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, getBranchName(SCMCheckoutBranch));
         } else {
             span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "<unknown>");
         }
