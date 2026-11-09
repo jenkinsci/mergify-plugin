@@ -14,7 +14,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jenkins.branch.MultiBranchProject;
 import jenkins.model.Jenkins;
+import jenkins.scm.api.SCMRevisionAction;
 import org.jenkinsci.plugins.gitclient.GitClient;
+import org.jenkinsci.plugins.github_branch_source.PullRequestSCMHead;
+import org.jenkinsci.plugins.github_branch_source.PullRequestSCMRevision;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 
 public class JobMetadata implements Action {
@@ -27,9 +30,14 @@ public class JobMetadata implements Action {
     private volatile boolean runnerInfoUpgraded;
     private volatile String SCMCheckoutBranch;
     private volatile String SCMCheckoutCommit;
+    // The head of a pull request build, which wins over its checkout's. Not saved with
+    // the build: it is read again from the run before each span.
+    private transient volatile PullRequestHead pullRequestHead;
     private Map<String, String> repositoryURLs;
     private volatile String jobTraceId;
     private volatile String jobSpanId;
+
+    private record PullRequestHead(String branch, String commit) {}
 
     public JobMetadata(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
@@ -157,11 +165,16 @@ public class JobMetadata implements Action {
             return;
         }
 
-        if (SCMCheckoutBranch == null) {
+        PullRequestHead pullRequest = pullRequestHead;
+        String headBranch = pullRequest != null
+                ? pullRequest.branch()
+                : SCMCheckoutBranch != null ? getBranchName(SCMCheckoutBranch) : null;
+        String headCommit = pullRequest != null ? pullRequest.commit() : SCMCheckoutCommit;
+        if (headBranch == null) {
             LOGGER.warning("SCMCheckoutBranch is null, skipping span");
             return;
         }
-        if (SCMCheckoutCommit == null) {
+        if (headCommit == null) {
             LOGGER.warning("SCMCheckoutCommit is null, skipping span");
             return;
         }
@@ -174,12 +187,8 @@ public class JobMetadata implements Action {
         span.setAttribute(TraceUtils.CICD_PIPELINE_CREATED_AT, pipelineCreatedAt);
         span.setAttribute(TraceUtils.CICD_PIPELINE_URL, Jenkins.get().getRootUrl() + pipelineUrl);
         span.setAttribute(TraceUtils.CICD_PIPELINE_RUNNER_GROUP_NAME, RunnerInfo.DEFAULT_GROUP_NAME);
-        if (SCMCheckoutBranch != null) {
-            span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, getBranchName(SCMCheckoutBranch));
-        } else {
-            span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "<unknown>");
-        }
-        span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, SCMCheckoutCommit);
+        span.setAttribute(TraceUtils.VCS_REF_HEAD_NAME, headBranch);
+        span.setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, headCommit);
 
         RunnerInfo effectiveRunner = runnerOverride != null ? runnerOverride : runnerInfo;
         if (effectiveRunner != null) {
@@ -241,6 +250,24 @@ public class JobMetadata implements Action {
                 SCMCheckoutBranch = branch.getName();
                 break;
             }
+        }
+    }
+
+    /**
+     * The head of a pull request build of a multibranch project, which its checkout does
+     * not give: it checks out the pseudo-branch "PR-123" and, under the merge strategy,
+     * a merge commit made on the agent that GitHub never sees. The build reports the
+     * pull request's source branch and the commit at its tip instead, as a GitHub
+     * Actions run of a pull request does, so that it is found by the pull request.
+     */
+    public void setSCMCheckoutInfoFromPullRequest(Run<?, ?> run) {
+        SCMRevisionAction action = run.getAction(SCMRevisionAction.class);
+        if (action != null
+                && action.getRevision() instanceof PullRequestSCMRevision revision
+                && revision.getHead() instanceof PullRequestSCMHead head
+                && head.getSourceBranch() != null
+                && revision.getPullHash() != null) {
+            pullRequestHead = new PullRequestHead(head.getSourceBranch(), revision.getPullHash());
         }
     }
 
