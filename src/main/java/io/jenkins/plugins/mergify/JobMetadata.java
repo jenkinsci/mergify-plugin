@@ -20,6 +20,10 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 public class JobMetadata implements Action {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
     private final String pipelineName;
+    // "owner/repo" of the multibranch project a branch or pull request job belongs to,
+    // null for any other job. A pipeline can check out a shared library or another
+    // repository before its own, so only a checkout of this repository describes the job.
+    private final String projectRepositoryName;
     private final String pipelineId;
     private final String pipelineUrl;
     private final Long pipelineCreatedAt;
@@ -36,6 +40,7 @@ public class JobMetadata implements Action {
         this.pipelineName = job.getParent() instanceof MultiBranchProject<?, ?> project
                 ? project.getFullName()
                 : job.getFullDisplayName();
+        this.projectRepositoryName = getRepositoryName(TraceUtils.getMultiBranchRemote(job));
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
@@ -211,8 +216,18 @@ public class JobMetadata implements Action {
         repositoryURLs.put(name, url);
     }
 
+    // A checkout with several remotes describes the job when any of them is its repository.
+    private boolean isCheckoutOfThisJob(Collection<String> urls) {
+        return projectRepositoryName == null
+                || urls.stream().anyMatch(url -> projectRepositoryName.equalsIgnoreCase(getRepositoryName(url)));
+    }
+
     public void setSCMCheckoutInfoFromEnvs(EnvVars envVars) {
-        addRepositoryURL("SCMCheckoutURL", envVars.get("GIT_URL"));
+        String url = envVars.get("GIT_URL");
+        if (!isCheckoutOfThisJob(Collections.singleton(url))) {
+            return;
+        }
+        addRepositoryURL("SCMCheckoutURL", url);
         if (SCMCheckoutBranch != null && SCMCheckoutCommit != null) {
             return;
         }
@@ -223,7 +238,10 @@ public class JobMetadata implements Action {
     public void setSCMCheckoutInfoFromBuildData(Run<?, ?> run) {
         if (SCMCheckoutBranch != null && SCMCheckoutCommit != null) return;
 
-        BuildData data = run.getAction(BuildData.class);
+        BuildData data = run.getActions(BuildData.class).stream()
+                .filter(d -> isCheckoutOfThisJob(d.getRemoteUrls()))
+                .findFirst()
+                .orElse(null);
         if (data == null) return;
 
         Collection<String> urls = data.getRemoteUrls();
@@ -250,6 +268,10 @@ public class JobMetadata implements Action {
         }
         // Retrieve repository URL
         List<UserRemoteConfig> remoteConfigs = gitSCM.getUserRemoteConfigs();
+        if (!isCheckoutOfThisJob(
+                remoteConfigs.stream().map(UserRemoteConfig::getUrl).toList())) {
+            return;
+        }
         addRepositoryURL(
                 "GitSCM", remoteConfigs.isEmpty() ? null : remoteConfigs.get(0).getUrl());
 
