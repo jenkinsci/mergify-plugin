@@ -1,0 +1,6 @@
+Revision history for #10:
+
+rev 2 (content) 2026-11-09 09:52 UTC
+rev 1 (initial) 2026-11-09 09:52 UTC
+
+<!-- mergify-revision-data: {"schema_version":1,"pull_number":10,"entries":[{"number":1,"change_type":"initial","old_sha":null,"new_sha":"8440d8e3f880728b02b58b62d78ea2f4fe087309","timestamp_iso":"2026-11-09T09:52:24Z","reason":"","replay_sha":null,"compare_url":null},{"number":2,"change_type":"content","old_sha":"8440d8e3f880728b02b58b62d78ea2f4fe087309","new_sha":"60252654575aa2d4478894bff2eb354f5dac2e00","timestamp_iso":"2026-11-09T09:52:24Z","reason":"","replay_sha":null,"compare_url":"https://github.com/jenkinsci/mergify-plugin/compare/8440d8e3f880728b02b58b62d78ea2f4fe087309...60252654575aa2d4478894bff2eb354f5dac2e00"}]} -->
