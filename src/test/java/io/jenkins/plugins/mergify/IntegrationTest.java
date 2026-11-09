@@ -305,7 +305,9 @@ class IntegrationTest {
                 repoDir.toURI());
 
         MockFolder folder = jenkinsRule.createFolder("team");
+        folder.setDisplayName("Team");
         WorkflowJob plainJob = folder.createProject(WorkflowJob.class, "plain");
+        plainJob.setDisplayName("Plain job");
         plainJob.setDefinition(new CpsFlowDefinition(jenkinsfile, true));
         WorkflowRun plainRun = jenkinsRule.buildAndAssertSuccess(plainJob);
 
@@ -345,8 +347,9 @@ class IntegrationTest {
                 assertEquals("team/my-repo", jobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
             }
             SpanData plainJobSpan = jobSpanByRun.get(plainRun.getExternalizableId());
-            assertEquals("team » plain", plainJobSpan.getName());
-            assertEquals("team » plain", plainJobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_NAME));
+            assertEquals("team/plain", plainJobSpan.getName());
+            assertEquals("team/plain", plainJobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_NAME));
+            assertEquals("team/plain", plainJobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_NAME));
         }
     }
 
