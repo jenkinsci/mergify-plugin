@@ -45,9 +45,8 @@ public class JobMetadata implements Action {
 
     public JobMetadata(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
-        this.pipelineName = job.getParent() instanceof MultiBranchProject<?, ?> project
-                ? project.getFullName()
-                : job.getFullDisplayName();
+        this.pipelineName =
+                job.getParent() instanceof MultiBranchProject<?, ?> project ? project.getFullName() : job.getFullName();
         this.projectRepositoryName = getRepositoryName(TraceUtils.getMultiBranchRemote(job));
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = run.getUrl();
@@ -76,10 +75,12 @@ public class JobMetadata implements Action {
     }
 
     /**
-     * The pipeline and job name of the job's runs. A branch or pull request job of a
-     * multibranch project takes the project's full name (JOB_NAME without its branch
-     * segment), so every branch and pull request shares one history. Its own display
-     * name would carry the pull request title, which can change.
+     * The pipeline and job name of the job's runs: the job's full name, its JOB_NAME
+     * ("folder/job"), which the test clients name its tests after. Not its display name
+     * ("folder » job"), which the user can change and a pull request job takes from the
+     * pull request title. A branch or pull request job of a multibranch project takes the
+     * project's full name (JOB_NAME without its branch segment), so every branch and pull
+     * request shares one history.
      */
     public String getPipelineName() {
         return pipelineName;
