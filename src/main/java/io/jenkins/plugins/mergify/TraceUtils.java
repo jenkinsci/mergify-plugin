@@ -17,9 +17,9 @@ import io.opentelemetry.context.Context;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.logging.Logger;
+import jenkins.branch.MultiBranchProject;
+import jenkins.plugins.git.AbstractGitSCMSource;
 import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceOwner;
-import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
 
 public class TraceUtils {
     public static final AttributeKey<String> CICD_PROVIDER_NAME = AttributeKey.stringKey("cicd.provider.name");
@@ -202,13 +202,9 @@ public class TraceUtils {
     public static String getSCMRepositoryUrl(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
 
-        // Check if it's a multibranch pipeline with GitHub source
-        if (job instanceof SCMSourceOwner scmOwner) {
-            for (SCMSource source : scmOwner.getSCMSources()) {
-                if (source instanceof GitHubSCMSource) {
-                    return ((GitHubSCMSource) source).getRemote();
-                }
-            }
+        String multiBranchRemote = getMultiBranchRemote(job);
+        if (multiBranchRemote != null) {
+            return multiBranchRemote;
         }
 
         // Check if it's a Freestyle job with Git SCM
@@ -220,5 +216,25 @@ public class TraceUtils {
         }
 
         return null; // No GitHub source found
+    }
+
+    /**
+     * The remote of the multibranch project a branch or pull request job belongs to, when
+     * the project's source is a Git one (GitHub or plain Git). Null otherwise.
+     */
+    public static String getMultiBranchRemote(Job<?, ?> job) {
+        if (!(job.getParent() instanceof MultiBranchProject<?, ?>)) {
+            return null;
+        }
+        // Runs in the build's listeners, a checkout's included: a failure here must not
+        // fail the build.
+        try {
+            if (SCMSource.SourceByItem.findSource(job) instanceof AbstractGitSCMSource source) {
+                return source.getRemote();
+            }
+        } catch (RuntimeException e) {
+            LOGGER.warning("Failed to get the remote of " + job.getFullName() + "'s project: " + e);
+        }
+        return null;
     }
 }

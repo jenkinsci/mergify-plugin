@@ -2,6 +2,7 @@ package io.jenkins.plugins.mergify;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
@@ -11,6 +12,7 @@ import hudson.model.Label;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
+import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.Fingerprinter;
 import hudson.tasks.Shell;
@@ -27,15 +29,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import jenkins.branch.Branch;
 import jenkins.branch.BranchSource;
+import jenkins.plugins.git.GitSCMSource;
+import jenkins.plugins.git.traits.BranchDiscoveryTrait;
+import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMSource;
+import org.jenkinsci.plugins.github_branch_source.BranchSCMHead;
+import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
+import org.jenkinsci.plugins.github_branch_source.PullRequestSCMHead;
+import org.jenkinsci.plugins.github_branch_source.SSHCheckoutTrait;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.libs.GlobalLibraries;
+import org.jenkinsci.plugins.workflow.libs.LibraryConfiguration;
+import org.jenkinsci.plugins.workflow.libs.SCMSourceRetriever;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -334,6 +347,105 @@ class IntegrationTest {
             SpanData plainJobSpan = jobSpanByRun.get(plainRun.getExternalizableId());
             assertEquals("team » plain", plainJobSpan.getName());
             assertEquals("team » plain", plainJobSpan.getAttributes().get(TraceUtils.CICD_PIPELINE_NAME));
+        }
+    }
+
+    private String commitFile(File repoDir, String path, String content) throws Exception {
+        File file = new File(repoDir, path);
+        Files.createDirectories(file.getParentFile().toPath());
+        Files.writeString(file.toPath(), content);
+        runCommand(repoDir, "git add " + path);
+        runCommand(repoDir, "git commit -m 'add " + path + "'");
+        return runCommand(repoDir, "git rev-parse HEAD");
+    }
+
+    @Test
+    void testMultibranchJobAfterSharedLibraryCheckout() throws Exception {
+        File libraryRepo = createGitRepository("shared-library");
+        commitFile(libraryRepo, "vars/greet.groovy", "def call() { echo 'hello' }");
+        runCommand(libraryRepo, "git branch -m v1");
+        File projectRepo = createGitRepository("my-app");
+        String projectCommit = commitFile(projectRepo, "Jenkinsfile", "greet()\nnode { checkout scm }");
+        runCommand(projectRepo, "git checkout -b no-checkout");
+        commitFile(projectRepo, "Jenkinsfile", "greet()");
+        runCommand(projectRepo, "git checkout main");
+        String projectUrl = projectRepo.toPath().toUri().toString();
+
+        // An implicit library is checked out when the Jenkinsfile compiles, before
+        // the build checks out its own repository.
+        LibraryConfiguration library = new LibraryConfiguration(
+                "shared-library",
+                new SCMSourceRetriever(
+                        new GitSCMSource(libraryRepo.toPath().toUri().toString())));
+        library.setDefaultVersion("v1");
+        library.setImplicit(true);
+        List<LibraryConfiguration> previousLibraries = GlobalLibraries.get().getLibraries();
+        GlobalLibraries.get().setLibraries(List.of(library));
+        // Both repositories are local directories, which Git checkouts refuse by default.
+        boolean allowLocalCheckout = GitSCM.ALLOW_LOCAL_CHECKOUT;
+        GitSCM.ALLOW_LOCAL_CHECKOUT = true;
+        try {
+            WorkflowMultiBranchProject project = jenkinsRule.createProject(WorkflowMultiBranchProject.class, "my-app");
+            GitSCMSource source = new GitSCMSource(projectUrl);
+            source.setTraits(List.of(new BranchDiscoveryTrait()));
+            project.getSourcesList().add(new BranchSource(source));
+            project.scheduleBuild2(0).getFuture().get();
+            jenkinsRule.waitUntilNoActivity();
+
+            Map<String, SpanData> jobSpanByRun = getSpans().stream()
+                    .filter(s -> "job".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
+                    .collect(Collectors.toMap(s -> s.getAttributes().get(TraceUtils.CICD_PIPELINE_RUN_ID), s -> s));
+            WorkflowRun run =
+                    jenkinsRule.assertBuildStatusSuccess(project.getItem("main").getLastBuild());
+            jenkinsRule.assertLogContains("Loading library shared-library@v1", run);
+            Map<AttributeKey<?>, Object> attributes =
+                    jobSpanByRun.get(run.getExternalizableId()).getAttributes().asMap();
+            assertEquals(projectUrl, attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
+            assertEquals("SCMRemoteURL", attributes.get(TraceUtils.VCS_REPOSITORY_URL_SOURCE));
+            assertEquals(projectCommit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
+            assertEquals("main", attributes.get(TraceUtils.VCS_REF_HEAD_NAME));
+
+            // Never checks out its own repository: no commit to report, so nothing is
+            // sent, rather than the library's commit.
+            WorkflowRun noCheckoutRun = jenkinsRule.assertBuildStatusSuccess(
+                    project.getItem("no-checkout").getLastBuild());
+            jenkinsRule.assertLogContains("Loading library shared-library@v1", noCheckoutRun);
+            assertNull(jobSpanByRun.get(noCheckoutRun.getExternalizableId()));
+        } finally {
+            GitSCM.ALLOW_LOCAL_CHECKOUT = allowLocalCheckout;
+            GlobalLibraries.get().setLibraries(previousLibraries);
+        }
+    }
+
+    @Test
+    void testGitHubPullRequestJobRemote() throws Exception {
+        WorkflowMultiBranchProject project = jenkinsRule.createProject(WorkflowMultiBranchProject.class, "github-app");
+        try {
+            GitHubSCMSource source = new GitHubSCMSource("mergifyio", "my-app");
+            source.setId("github");
+            source.setTraits(List.of(new SSHCheckoutTrait("ssh-key")));
+            project.getSourcesList().add(new BranchSource(source));
+            // From a fork: the job still builds the project's repository.
+            PullRequestSCMHead pullRequest = new PullRequestSCMHead(
+                    "PR-1",
+                    "contributor",
+                    "my-app",
+                    "feature",
+                    1,
+                    new BranchSCMHead("main"),
+                    new SCMHeadOrigin.Fork("contributor"),
+                    ChangeRequestCheckoutStrategy.MERGE);
+            WorkflowJob job = project.getProjectFactory()
+                    .newInstance(new Branch("github", pullRequest, new NullSCM(), List.of()));
+
+            assertEquals("https://github.com/mergifyio/my-app.git", TraceUtils.getMultiBranchRemote(job));
+            // Its checkout, over SSH here, is of the same repository, so it describes the job.
+            GitSCM checkout = (GitSCM) source.build(pullRequest, null);
+            String checkoutUrl = checkout.getUserRemoteConfigs().get(0).getUrl();
+            assertTrue(checkoutUrl.startsWith("git@"), checkoutUrl);
+            assertEquals("mergifyio/my-app", JobMetadata.getRepositoryName(checkoutUrl));
+        } finally {
+            project.delete();
         }
     }
 }
