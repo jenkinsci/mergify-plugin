@@ -1,0 +1,1 @@
+Rebased on main (#10, #12) in place of the GitHub merge, which had dropped the getFullName() change in the JobMetadata constructor and failed testMultibranchJobs.
