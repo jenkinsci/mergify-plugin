@@ -73,7 +73,7 @@ public class TraceUtils {
 
         JobMetadata jobSpanMetadata = getJobMetadata(run);
         jobSpanMetadata.setSCMCheckoutInfoFromBuildData(run);
-        jobSpanMetadata.setSCMCheckoutInfoFromPullRequest(run);
+        jobSpanMetadata.setSCMCheckoutInfoFromRevision(run);
         jobSpanMetadata.setCommonSpanAttributes(span);
         Result result = run.getResult();
         if (result == null) {
@@ -118,7 +118,7 @@ public class TraceUtils {
         }
 
         JobMetadata jobSpanMetadata = getJobMetadata(run);
-        jobSpanMetadata.setSCMCheckoutInfoFromPullRequest(run);
+        jobSpanMetadata.setSCMCheckoutInfoFromRevision(run);
         jobSpanMetadata.setCommonSpanAttributes(span, runnerOverride);
 
         if (isError) {

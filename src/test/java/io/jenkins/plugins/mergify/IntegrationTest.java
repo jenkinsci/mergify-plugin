@@ -2,7 +2,6 @@ package io.jenkins.plugins.mergify;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
@@ -25,6 +24,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -50,6 +50,7 @@ import org.jenkinsci.plugins.workflow.libs.GlobalLibraries;
 import org.jenkinsci.plugins.workflow.libs.LibraryConfiguration;
 import org.jenkinsci.plugins.workflow.libs.SCMSourceRetriever;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,14 +84,31 @@ class IntegrationTest {
         assertEquals(1, tracerServiceExt.size());
     }
 
+    private List<LibraryConfiguration> previousLibraries;
+    private boolean allowLocalCheckout;
+
     @BeforeEach
     void beforeEach() {
         spanExporter.reset();
+        previousLibraries = GlobalLibraries.get().getLibraries();
+        allowLocalCheckout = GitSCM.ALLOW_LOCAL_CHECKOUT;
+    }
+
+    @AfterEach
+    void afterEach() {
+        GlobalLibraries.get().setLibraries(previousLibraries);
+        GitSCM.ALLOW_LOCAL_CHECKOUT = allowLocalCheckout;
     }
 
     private List<SpanData> getSpans() {
         TracerService.forceFlush();
         return spanExporter.getFinishedSpanItems();
+    }
+
+    private Map<String, SpanData> getJobSpansByRun() {
+        return getSpans().stream()
+                .filter(s -> "job".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
+                .collect(Collectors.toMap(s -> s.getAttributes().get(TraceUtils.CICD_PIPELINE_RUN_ID), s -> s));
     }
 
     private String runCommand(File dir, String command) throws Exception {
@@ -332,9 +350,7 @@ class IntegrationTest {
             project.scheduleBuild2(0).getFuture().get();
             jenkinsRule.waitUntilNoActivity();
 
-            Map<String, SpanData> jobSpanByRun = getSpans().stream()
-                    .filter(s -> "job".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
-                    .collect(Collectors.toMap(s -> s.getAttributes().get(TraceUtils.CICD_PIPELINE_RUN_ID), s -> s));
+            Map<String, SpanData> jobSpanByRun = getJobSpansByRun();
             assertEquals(4, jobSpanByRun.size());
 
             for (String branchJob : List.of("master", "feature%2Fx", changeRequest)) {
@@ -362,62 +378,83 @@ class IntegrationTest {
         return runCommand(repoDir, "git rev-parse HEAD");
     }
 
-    @Test
-    void testMultibranchJobAfterSharedLibraryCheckout() throws Exception {
+    // A branch off main whose Jenkinsfile is the given one. Returns its commit.
+    private String commitBranch(File repoDir, String branch, String jenkinsfile) throws Exception {
+        runCommand(repoDir, "git checkout -b " + branch + " main");
+        String commit = commitFile(repoDir, "Jenkinsfile", jenkinsfile);
+        runCommand(repoDir, "git checkout main");
+        return commit;
+    }
+
+    // A library that provides greet(), which every pipeline loads when its Jenkinsfile
+    // compiles: it is checked out before the pipeline checks out its own repository.
+    private LibraryConfiguration createImplicitSharedLibrary() throws Exception {
         File libraryRepo = createGitRepository("shared-library");
         commitFile(libraryRepo, "vars/greet.groovy", "def call() { echo 'hello' }");
         runCommand(libraryRepo, "git branch -m v1");
-        File projectRepo = createGitRepository("my-app");
-        String projectCommit = commitFile(projectRepo, "Jenkinsfile", "greet()\nnode { checkout scm }");
-        runCommand(projectRepo, "git checkout -b no-checkout");
-        commitFile(projectRepo, "Jenkinsfile", "greet()");
-        runCommand(projectRepo, "git checkout main");
-        String projectUrl = projectRepo.toPath().toUri().toString();
-
-        // An implicit library is checked out when the Jenkinsfile compiles, before
-        // the build checks out its own repository.
         LibraryConfiguration library = new LibraryConfiguration(
                 "shared-library",
                 new SCMSourceRetriever(
                         new GitSCMSource(libraryRepo.toPath().toUri().toString())));
         library.setDefaultVersion("v1");
         library.setImplicit(true);
-        List<LibraryConfiguration> previousLibraries = GlobalLibraries.get().getLibraries();
-        GlobalLibraries.get().setLibraries(List.of(library));
-        // Both repositories are local directories, which Git checkouts refuse by default.
-        boolean allowLocalCheckout = GitSCM.ALLOW_LOCAL_CHECKOUT;
-        GitSCM.ALLOW_LOCAL_CHECKOUT = true;
-        try {
-            WorkflowMultiBranchProject project = jenkinsRule.createProject(WorkflowMultiBranchProject.class, "my-app");
-            GitSCMSource source = new GitSCMSource(projectUrl);
-            source.setTraits(List.of(new BranchDiscoveryTrait()));
-            project.getSourcesList().add(new BranchSource(source));
-            project.scheduleBuild2(0).getFuture().get();
-            jenkinsRule.waitUntilNoActivity();
+        return library;
+    }
 
-            Map<String, SpanData> jobSpanByRun = getSpans().stream()
-                    .filter(s -> "job".equals(s.getAttributes().get(TraceUtils.CICD_PIPELINE_TASK_SCOPE)))
-                    .collect(Collectors.toMap(s -> s.getAttributes().get(TraceUtils.CICD_PIPELINE_RUN_ID), s -> s));
-            WorkflowRun run =
-                    jenkinsRule.assertBuildStatusSuccess(project.getItem("main").getLastBuild());
+    @Test
+    void testMultibranchJobsReportTheirOwnRevision() throws Exception {
+        File projectRepo = createGitRepository("my-app");
+        String projectUrl = projectRepo.toPath().toUri().toString();
+        // The project's repository hosts a library too.
+        commitFile(projectRepo, "vars/welcome.groovy", "def call() { echo 'welcome' }");
+        Map<String, String> commits = new HashMap<>();
+        commits.put("main", commitFile(projectRepo, "Jenkinsfile", "greet()\nnode { checkout scm }"));
+        commits.put("no-checkout", commitBranch(projectRepo, "no-checkout", "greet()"));
+        commits.put(
+                "same-repository-library",
+                commitBranch(projectRepo, "same-repository-library", "@Library('my-app') _\nwelcome()"));
+        commits.put(
+                "other-ref-first",
+                commitBranch(
+                        projectRepo,
+                        "other-ref-first",
+                        String.format(
+                                """
+                                node {
+                                    checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])
+                                    checkout scm
+                                }""",
+                                projectUrl)));
+
+        LibraryConfiguration projectLibrary =
+                new LibraryConfiguration("my-app", new SCMSourceRetriever(new GitSCMSource(projectUrl)));
+        projectLibrary.setDefaultVersion("main");
+        GlobalLibraries.get().setLibraries(List.of(createImplicitSharedLibrary(), projectLibrary));
+        // Both repositories are local directories, which Git checkouts refuse by default.
+        GitSCM.ALLOW_LOCAL_CHECKOUT = true;
+        WorkflowMultiBranchProject project = jenkinsRule.createProject(WorkflowMultiBranchProject.class, "my-app");
+        GitSCMSource source = new GitSCMSource(projectUrl);
+        source.setTraits(List.of(new BranchDiscoveryTrait()));
+        project.getSourcesList().add(new BranchSource(source));
+        project.scheduleBuild2(0).getFuture().get();
+        jenkinsRule.waitUntilNoActivity();
+
+        Map<String, SpanData> jobSpanByRun = getJobSpansByRun();
+        for (Map.Entry<String, String> branch : commits.entrySet()) {
+            WorkflowRun run = jenkinsRule.assertBuildStatusSuccess(
+                    project.getItem(branch.getKey()).getLastBuild());
             jenkinsRule.assertLogContains("Loading library shared-library@v1", run);
-            Map<AttributeKey<?>, Object> attributes =
-                    jobSpanByRun.get(run.getExternalizableId()).getAttributes().asMap();
+            SpanData jobSpan = jobSpanByRun.get(run.getExternalizableId());
+            assertNotNull(jobSpan, "no job span for " + run);
+            Map<AttributeKey<?>, Object> attributes = jobSpan.getAttributes().asMap();
             assertEquals(projectUrl, attributes.get(TraceUtils.VCS_REPOSITORY_URL_FULL));
             assertEquals("SCMRemoteURL", attributes.get(TraceUtils.VCS_REPOSITORY_URL_SOURCE));
-            assertEquals(projectCommit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
-            assertEquals("main", attributes.get(TraceUtils.VCS_REF_HEAD_NAME));
-
-            // Never checks out its own repository: no commit to report, so nothing is
-            // sent, rather than the library's commit.
-            WorkflowRun noCheckoutRun = jenkinsRule.assertBuildStatusSuccess(
-                    project.getItem("no-checkout").getLastBuild());
-            jenkinsRule.assertLogContains("Loading library shared-library@v1", noCheckoutRun);
-            assertNull(jobSpanByRun.get(noCheckoutRun.getExternalizableId()));
-        } finally {
-            GitSCM.ALLOW_LOCAL_CHECKOUT = allowLocalCheckout;
-            GlobalLibraries.get().setLibraries(previousLibraries);
+            assertEquals(branch.getValue(), attributes.get(TraceUtils.VCS_REF_HEAD_REVISION), branch.getKey());
+            assertEquals(branch.getKey(), attributes.get(TraceUtils.VCS_REF_HEAD_NAME));
         }
+        jenkinsRule.assertLogContains(
+                "Loading library my-app@main",
+                project.getItem("same-repository-library").getLastBuild());
     }
 
     @Test
