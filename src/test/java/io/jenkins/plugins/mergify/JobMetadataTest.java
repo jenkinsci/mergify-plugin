@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
 
+import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -137,6 +138,31 @@ class JobMetadataTest {
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_FULL, "https://github.com/owner/repo.git");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_URL_SOURCE, "SCMCheckoutURL");
         verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_NAME, "owner/repo");
+    }
+
+    @Test
+    void testGitHubProjectKeepsOnlyCheckoutsOfItsRepository() throws Exception {
+        build.getParent().addProperty(new GithubProjectProperty("https://github.com/Owner/Repo/"));
+        jobMetadata = new JobMetadata(build);
+        jobMetadata.addRepositoryURL("GitHubProjectProperty", "https://github.com/Owner/Repo/");
+        // A shared library, checked out first.
+        EnvVars library = new EnvVars();
+        library.put("GIT_URL", "https://github.com/owner/library.git");
+        library.put("GIT_COMMIT", MERGE_COMMIT);
+        library.put("GIT_BRANCH", "v1");
+        jobMetadata.setSCMCheckoutInfoFromEnvs(library);
+        // The property's repository, over SSH.
+        EnvVars own = new EnvVars();
+        own.put("GIT_URL", "git@github.com:owner/repo.git");
+        own.put("GIT_COMMIT", REVISION_COMMIT);
+        own.put("GIT_BRANCH", "origin/main");
+        jobMetadata.setSCMCheckoutInfoFromEnvs(own);
+
+        jobMetadata.setCommonSpanAttributes(span);
+
+        verify(span).setAttribute(TraceUtils.VCS_REPOSITORY_NAME, "Owner/Repo");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "main");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, REVISION_COMMIT);
     }
 
     @Test

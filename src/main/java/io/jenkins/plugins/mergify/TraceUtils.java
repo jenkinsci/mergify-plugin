@@ -173,7 +173,7 @@ public class TraceUtils {
                 .setAttribute(CICD_PIPELINE_TASK_RUN_ID, job.getFullDisplayName())
                 .startSpan();
 
-        jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(run));
+        jobSpanMetadata.addRepositoryURL("GitHubProjectProperty", getGitHubProjectRepositoryUrl(job));
         jobSpanMetadata.addRepositoryURL("SCMRemoteURL", getSCMRepositoryUrl(run));
         jobSpanMetadata.setSpanContext(span.getSpanContext());
         return span;
@@ -189,9 +189,8 @@ public class TraceUtils {
         return newJobMetadata;
     }
 
-    public static String getGitHubProjectRepositoryUrl(Run<?, ?> run) {
+    public static String getGitHubProjectRepositoryUrl(Job<?, ?> job) {
         // Check GitHub Project Property (GitHub Project Plugin)
-        Job<?, ?> job = run.getParent();
         GithubProjectProperty githubProjectProperty = job.getProperty(GithubProjectProperty.class);
         if (githubProjectProperty != null) {
             return githubProjectProperty.getProjectUrlStr();
@@ -216,6 +215,16 @@ public class TraceUtils {
         }
 
         return null; // No GitHub source found
+    }
+
+    /**
+     * The repository a job declares, when it declares one: the one its GitHub project
+     * property points to, which its runs are reported under, else its multibranch
+     * project's. Null otherwise.
+     */
+    public static String getJobRepositoryUrl(Job<?, ?> job) {
+        String gitHubProjectUrl = getGitHubProjectRepositoryUrl(job);
+        return gitHubProjectUrl != null ? gitHubProjectUrl : getMultiBranchRemote(job);
     }
 
     /**

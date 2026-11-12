@@ -27,9 +27,10 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 public class JobMetadata implements Action {
     private static final Logger LOGGER = Logger.getLogger(JobMetadata.class.getName());
     private final String pipelineName;
-    // "owner/repo" of the multibranch project a branch or pull request job belongs to,
-    // null for any other job. A pipeline can check out a shared library or another
-    // repository before its own, so only a checkout of this repository describes the job.
+    // "owner/repo" of the repository the job builds, when the job names one: its GitHub
+    // project property's, else its multibranch project's. Null for any other job.
+    // A pipeline can check out a shared library or another repository before its own,
+    // so only a checkout of this repository describes the job.
     private final String projectRepositoryName;
     private final String pipelineId;
     private final String pipelineUrl;
@@ -51,7 +52,7 @@ public class JobMetadata implements Action {
         Job<?, ?> job = run.getParent();
         this.pipelineName =
                 job.getParent() instanceof MultiBranchProject<?, ?> project ? project.getFullName() : job.getFullName();
-        this.projectRepositoryName = getRepositoryName(TraceUtils.getMultiBranchRemote(job));
+        this.projectRepositoryName = getRepositoryName(TraceUtils.getJobRepositoryUrl(job));
         this.pipelineId = run.getExternalizableId();
         this.pipelineUrl = run.getUrl();
         this.repositoryURLs = new LinkedHashMap<>();
