@@ -1,1 +1,6 @@
-Rebased on main (#10, #12) in place of the GitHub merge, which had dropped the getFullName() change in the JobMetadata constructor and failed testMultibranchJobs.
+Revision history for #11:
+
+rev 2 (content) 2026-11-12 14:19 UTC — Rebased on main (#10, #12) in place of the GitHub merge, which had dropped the getFullName() change in the JobMetadata constructor and failed testMultibranchJobs.
+rev 1 (initial) 2026-11-12 14:19 UTC
+
+<!-- mergify-revision-data: {"schema_version":1,"pull_number":11,"entries":[{"number":1,"change_type":"initial","old_sha":null,"new_sha":"b050ce25da864219ebc27943da07a93e03ed7f99","timestamp_iso":"2026-11-12T14:19:18Z","reason":"","replay_sha":null,"compare_url":null},{"number":2,"change_type":"content","old_sha":"b050ce25da864219ebc27943da07a93e03ed7f99","new_sha":"0d53bfa505c1dce6d4af1aa2899e8d4c4fd311db","timestamp_iso":"2026-11-12T14:19:18Z","reason":"Rebased on main (#10, #12) in place of the GitHub merge, which had dropped the getFullName() change in the JobMetadata constructor and failed testMultibranchJobs.","replay_sha":null,"compare_url":"https://github.com/jenkinsci/mergify-plugin/compare/b050ce25da864219ebc27943da07a93e03ed7f99...0d53bfa505c1dce6d4af1aa2899e8d4c4fd311db"}]} -->
