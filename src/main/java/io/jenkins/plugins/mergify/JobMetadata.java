@@ -14,7 +14,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jenkins.branch.MultiBranchProject;
 import jenkins.model.Jenkins;
+import jenkins.plugins.git.AbstractGitSCMSource;
+import jenkins.plugins.git.GitRefSCMHead;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMRevisionAction;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.jenkinsci.plugins.github_branch_source.PullRequestSCMHead;
 import org.jenkinsci.plugins.github_branch_source.PullRequestSCMRevision;
@@ -34,14 +38,14 @@ public class JobMetadata implements Action {
     private volatile boolean runnerInfoUpgraded;
     private volatile String SCMCheckoutBranch;
     private volatile String SCMCheckoutCommit;
-    // The head of a pull request build, which wins over its checkout's. Not saved with
-    // the build: it is read again from the run before each span.
-    private transient volatile PullRequestHead pullRequestHead;
+    // The head a multibranch build was started for, which wins over its checkouts'. Not
+    // saved with the build: it is read again from the run before each span.
+    private transient volatile RevisionHead revisionHead;
     private Map<String, String> repositoryURLs;
     private volatile String jobTraceId;
     private volatile String jobSpanId;
 
-    private record PullRequestHead(String branch, String commit) {}
+    private record RevisionHead(String branch, String commit) {}
 
     public JobMetadata(Run<?, ?> run) {
         Job<?, ?> job = run.getParent();
@@ -171,11 +175,11 @@ public class JobMetadata implements Action {
             return;
         }
 
-        PullRequestHead pullRequest = pullRequestHead;
-        String headBranch = pullRequest != null
-                ? pullRequest.branch()
+        RevisionHead revision = revisionHead;
+        String headBranch = revision != null
+                ? revision.branch()
                 : SCMCheckoutBranch != null ? getBranchName(SCMCheckoutBranch) : null;
-        String headCommit = pullRequest != null ? pullRequest.commit() : SCMCheckoutCommit;
+        String headCommit = revision != null ? revision.commit() : SCMCheckoutCommit;
         if (headBranch == null) {
             LOGGER.warning("SCMCheckoutBranch is null, skipping span");
             return;
@@ -273,20 +277,32 @@ public class JobMetadata implements Action {
     }
 
     /**
-     * The head of a pull request build of a multibranch project, which its checkout does
-     * not give: it checks out the pseudo-branch "PR-123" and, under the merge strategy,
-     * a merge commit made on the agent that GitHub never sees. The build reports the
-     * pull request's source branch and the commit at its tip instead, as a GitHub
-     * Actions run of a pull request does, so that it is found by the pull request.
+     * The head a build of a multibranch project was started for, which its checkouts do
+     * not reliably give: a shared library, even one hosted in the job's own repository,
+     * or another ref can be checked out before it, and a build may check out nothing.
+     * A branch or tag build reports its name and commit. A pull request build checks
+     * out the pseudo-branch "PR-123" and, under the merge strategy, a merge commit made
+     * on the agent that GitHub never sees: it reports the pull request's source branch
+     * and the commit at its tip instead, as a GitHub Actions run of a pull request
+     * does, so that it is found by the pull request.
      */
-    public void setSCMCheckoutInfoFromPullRequest(Run<?, ?> run) {
+    public void setSCMCheckoutInfoFromRevision(Run<?, ?> run) {
         SCMRevisionAction action = run.getAction(SCMRevisionAction.class);
-        if (action != null
-                && action.getRevision() instanceof PullRequestSCMRevision revision
-                && revision.getHead() instanceof PullRequestSCMHead head
+        if (action == null) {
+            return;
+        }
+        SCMRevision revision = action.getRevision();
+        if (revision instanceof PullRequestSCMRevision pullRequest
+                && pullRequest.getHead() instanceof PullRequestSCMHead head
                 && head.getSourceBranch() != null
-                && revision.getPullHash() != null) {
-            pullRequestHead = new PullRequestHead(head.getSourceBranch(), revision.getPullHash());
+                && pullRequest.getPullHash() != null) {
+            revisionHead = new RevisionHead(head.getSourceBranch(), pullRequest.getPullHash());
+        } else if (revision instanceof AbstractGitSCMSource.SCMRevisionImpl branchOrTag
+                // Another ref (refs/pull/42/head, discovered by name) or a change request
+                // is named after no branch: it keeps its checkout's.
+                && !(branchOrTag.getHead() instanceof GitRefSCMHead)
+                && !(branchOrTag.getHead() instanceof ChangeRequestSCMHead)) {
+            revisionHead = new RevisionHead(branchOrTag.getHead().getName(), branchOrTag.getHash());
         }
     }
 

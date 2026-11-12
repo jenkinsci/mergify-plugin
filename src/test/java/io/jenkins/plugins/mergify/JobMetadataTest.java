@@ -9,11 +9,17 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import io.opentelemetry.api.trace.Span;
 import java.util.concurrent.TimeUnit;
+import jenkins.plugins.git.AbstractGitSCMSource;
+import jenkins.plugins.git.GitRefSCMHead;
+import jenkins.plugins.git.GitRefSCMRevision;
+import jenkins.plugins.git.GitTagSCMRevision;
 import jenkins.scm.api.SCMHeadOrigin;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMRevisionAction;
 import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 import org.jenkinsci.plugins.github_branch_source.BranchSCMHead;
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource;
+import org.jenkinsci.plugins.github_branch_source.GitHubTagSCMHead;
 import org.jenkinsci.plugins.github_branch_source.PullRequestSCMHead;
 import org.jenkinsci.plugins.github_branch_source.PullRequestSCMRevision;
 import org.junit.jupiter.api.AfterEach;
@@ -150,15 +156,25 @@ class JobMetadataTest {
 
     private static final String MERGE_COMMIT = "0123456789abcdef0123456789abcdef01234567";
     private static final String PULL_REQUEST_COMMIT = "fea7fea7fea7fea7fea7fea7fea7fea7fea7fea7";
+    private static final String REVISION_COMMIT = "b7a2c4b7a2c4b7a2c4b7a2c4b7a2c4b7a2c4b7a2";
+
+    private void checkOut(String branch) {
+        jobMetadata.addRepositoryURL("PROJECT", "https://github.com/owner/repo.git");
+        EnvVars envVars = new EnvVars();
+        envVars.put("GIT_COMMIT", MERGE_COMMIT);
+        envVars.put("GIT_BRANCH", branch);
+        jobMetadata.setSCMCheckoutInfoFromEnvs(envVars);
+    }
 
     // What the checkout of a multibranch pull request build gives, under the merge
     // strategy: the pseudo-branch and a merge commit made on the agent.
     private void checkOutPullRequestMerge() {
-        jobMetadata.addRepositoryURL("PROJECT", "https://github.com/owner/repo.git");
-        EnvVars envVars = new EnvVars();
-        envVars.put("GIT_COMMIT", MERGE_COMMIT);
-        envVars.put("GIT_BRANCH", "PR-123");
-        jobMetadata.setSCMCheckoutInfoFromEnvs(envVars);
+        checkOut("PR-123");
+    }
+
+    // The revision a multibranch build was started for.
+    private void startFor(SCMRevision revision) {
+        build.addAction(new SCMRevisionAction(new GitHubSCMSource("owner", "repo"), revision));
     }
 
     // The revision a multibranch pull request build was started for.
@@ -176,9 +192,7 @@ class JobMetadataTest {
                 new BranchSCMHead("main"),
                 origin,
                 ChangeRequestCheckoutStrategy.MERGE);
-        build.addAction(new SCMRevisionAction(
-                new GitHubSCMSource("owner", "repo"),
-                new PullRequestSCMRevision(head, "b45eb45eb45eb45eb45eb45eb45eb45eb45eb45e", PULL_REQUEST_COMMIT)));
+        startFor(new PullRequestSCMRevision(head, "b45eb45eb45eb45eb45eb45eb45eb45eb45eb45e", PULL_REQUEST_COMMIT));
     }
 
     @Test
@@ -202,7 +216,7 @@ class JobMetadataTest {
     void testCheckoutAfterThePullRequestHeadKeepsIt() {
         startForPullRequest("feature/x");
         // A stage that ended before the build checked anything out.
-        jobMetadata.setSCMCheckoutInfoFromPullRequest(build);
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
         checkOutPullRequestMerge();
 
         jobMetadata.setCommonSpanAttributes(span);
@@ -217,7 +231,7 @@ class JobMetadataTest {
         // Named like a remote-tracking branch, which a checkout's branch name is trimmed of.
         startForPullRequest("origin/fix");
 
-        jobMetadata.setSCMCheckoutInfoFromPullRequest(build);
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
         jobMetadata.setCommonSpanAttributes(span);
 
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "origin/fix");
@@ -229,7 +243,7 @@ class JobMetadataTest {
         // A pull request's head ref on GitHub is the fork's branch name, owner aside.
         startForPullRequest("someone", "main", new SCMHeadOrigin.Fork("someone"));
 
-        jobMetadata.setSCMCheckoutInfoFromPullRequest(build);
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
         jobMetadata.setCommonSpanAttributes(span);
 
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "main");
@@ -237,10 +251,47 @@ class JobMetadataTest {
     }
 
     @Test
-    void testBuildOfNoPullRequestKeepsItsCheckout() {
+    void testBranchBuildReportsItsRevisionOverItsCheckout() {
+        // Another ref of its repository, or a library hosted in it.
+        checkOut("origin/main");
+        startFor(new AbstractGitSCMSource.SCMRevisionImpl(new BranchSCMHead("feature/x"), REVISION_COMMIT));
+
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
+        jobMetadata.setCommonSpanAttributes(span);
+
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "feature/x");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, REVISION_COMMIT);
+    }
+
+    @Test
+    void testTagBuildReportsItsRevision() {
+        checkOut("origin/main");
+        startFor(new GitTagSCMRevision(new GitHubTagSCMHead("v1.0", 0L), REVISION_COMMIT));
+
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
+        jobMetadata.setCommonSpanAttributes(span);
+
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "v1.0");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, REVISION_COMMIT);
+    }
+
+    @Test
+    void testBuildOfAnotherRefKeepsItsCheckout() {
+        checkOut("origin/main");
+        startFor(new GitRefSCMRevision(new GitRefSCMHead("pr-42", "refs/pull/42/head"), REVISION_COMMIT));
+
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
+        jobMetadata.setCommonSpanAttributes(span);
+
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "main");
+        verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_REVISION, MERGE_COMMIT);
+    }
+
+    @Test
+    void testBuildWithoutRevisionKeepsItsCheckout() {
         checkOutPullRequestMerge();
 
-        jobMetadata.setSCMCheckoutInfoFromPullRequest(build);
+        jobMetadata.setSCMCheckoutInfoFromRevision(build);
         jobMetadata.setCommonSpanAttributes(span);
 
         verify(span).setAttribute(TraceUtils.VCS_REF_HEAD_NAME, "PR-123");
