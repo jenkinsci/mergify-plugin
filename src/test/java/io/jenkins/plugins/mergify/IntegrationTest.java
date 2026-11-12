@@ -2,6 +2,7 @@ package io.jenkins.plugins.mergify;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
@@ -124,8 +125,12 @@ class IntegrationTest {
         return new String(process.getInputStream().readAllBytes()).trim();
     }
 
-    private File createGitRepository(String jobName) throws Exception {
-        File repoDir = Files.createTempDirectory(jobName).toFile();
+    // A repository at <temporary directory>/<path>: with an "owner/repo" path, its URL
+    // names the repository owner/repo, as a GitHub project property can.
+    private File createGitRepository(String path) throws Exception {
+        File repoDir = Files.createDirectories(
+                        Files.createTempDirectory("repositories").resolve(path))
+                .toFile();
 
         // Initialize a real Git repository using system commands
         runCommand(repoDir, "git init");
@@ -144,7 +149,7 @@ class IntegrationTest {
         FreeStyleProject project = jenkinsRule.createFreeStyleProject(jobName);
 
         // Initialize a fake Git repository
-        File repoDir = createGitRepository(jobName);
+        File repoDir = createGitRepository("mergifyio/plugin");
         String commit = runCommand(repoDir, "git rev-parse HEAD").trim();
 
         GitSCM gitSCM = new GitSCM(
@@ -199,7 +204,7 @@ class IntegrationTest {
         WorkflowJob job = jenkinsRule.createProject(WorkflowJob.class, jobName);
 
         // Initialize a fake Git repository
-        File repoDir = createGitRepository(jobName);
+        File repoDir = createGitRepository("mergifyio/plugin");
         String commit = runCommand(repoDir, "git rev-parse HEAD").trim();
 
         // Define the pipeline script
@@ -266,7 +271,7 @@ class IntegrationTest {
 
         WorkflowJob job = jenkinsRule.createProject(WorkflowJob.class, jobName);
 
-        File repoDir = createGitRepository(jobName);
+        File repoDir = createGitRepository("mergifyio/plugin");
 
         String pipelineScript = String.format(
                 """
@@ -455,6 +460,46 @@ class IntegrationTest {
         jenkinsRule.assertLogContains(
                 "Loading library my-app@main",
                 project.getItem("same-repository-library").getLastBuild());
+    }
+
+    @Test
+    void testPipelineJobReportsTheCheckoutOfItsGitHubProject() throws Exception {
+        File projectRepo = createGitRepository("mergifyio/my-app");
+        String projectCommit = runCommand(projectRepo, "git rev-parse HEAD");
+        String projectUrl = projectRepo.toPath().toUri().toString();
+        String gitHubProjectUrl = "https://github.com/mergifyio/my-app";
+        GlobalLibraries.get().setLibraries(List.of(createImplicitSharedLibrary()));
+        GitSCM.ALLOW_LOCAL_CHECKOUT = true;
+
+        WorkflowJob job = jenkinsRule.createProject(WorkflowJob.class, "my-app-pipeline");
+        job.addProperty(new GithubProjectProperty(gitHubProjectUrl));
+        job.setDefinition(new CpsFlowDefinition(
+                String.format(
+                        """
+                        greet()
+                        node {
+                            checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: '%s']]])
+                        }""",
+                        projectUrl),
+                true));
+        WorkflowRun run = jenkinsRule.buildAndAssertSuccess(job);
+        jenkinsRule.assertLogContains("Loading library shared-library@v1", run);
+
+        // Never checks out its GitHub project: no commit to report, so nothing is
+        // sent, rather than the library's commit.
+        WorkflowJob libraryOnlyJob = jenkinsRule.createProject(WorkflowJob.class, "library-only-pipeline");
+        libraryOnlyJob.addProperty(new GithubProjectProperty(gitHubProjectUrl));
+        libraryOnlyJob.setDefinition(new CpsFlowDefinition("greet()", true));
+        WorkflowRun libraryOnlyRun = jenkinsRule.buildAndAssertSuccess(libraryOnlyJob);
+        jenkinsRule.assertLogContains("Loading library shared-library@v1", libraryOnlyRun);
+
+        Map<String, SpanData> jobSpanByRun = getJobSpansByRun();
+        Map<AttributeKey<?>, Object> attributes =
+                jobSpanByRun.get(run.getExternalizableId()).getAttributes().asMap();
+        assertEquals("mergifyio/my-app", attributes.get(TraceUtils.VCS_REPOSITORY_NAME));
+        assertEquals(projectCommit, attributes.get(TraceUtils.VCS_REF_HEAD_REVISION));
+        assertEquals("main", attributes.get(TraceUtils.VCS_REF_HEAD_NAME));
+        assertNull(jobSpanByRun.get(libraryOnlyRun.getExternalizableId()));
     }
 
     @Test
